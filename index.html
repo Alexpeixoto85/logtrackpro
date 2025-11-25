@@ -1,0 +1,3009 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiTrack Pro - Sistema Completo de Gestão Logística</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --info: #4895ef;
+            --warning: #f72585;
+            --danger: #e63946;
+            --dark: #1d3557;
+            --light: #f1faee;
+            --gray: #adb5bd;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+            --header-height: 70px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Layout Principal */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--dark) 0%, #14213d 100%);
+            color: white;
+            transition: all 0.3s ease;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: var(--header-height);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            font-size: 24px;
+            color: var(--success);
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: 700;
+            transition: opacity 0.3s;
+        }
+        
+        .sidebar.collapsed .logo-text {
+            opacity: 0;
+            width: 0;
+        }
+        
+        .toggle-sidebar {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .sidebar.collapsed .toggle-sidebar {
+            transform: rotate(180deg);
+        }
+        
+        .sidebar-menu {
+            padding: 20px 0;
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            position: relative;
+        }
+        
+        .sidebar-menu a {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: var(--success);
+            padding-left: 30px;
+        }
+        
+        .sidebar-menu i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .sidebar.collapsed .menu-text {
+            opacity: 0;
+            width: 0;
+        }
+        
+        .menu-text {
+            transition: opacity 0.3s;
+        }
+        
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s ease;
+            padding: 20px;
+        }
+        
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: var(--dark);
+            font-weight: 700;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-info img {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+        }
+        
+        .notification-bell {
+            position: relative;
+            font-size: 20px;
+            color: var(--dark);
+            cursor: pointer;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--warning);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            transition: all 0.3s ease;
+            border-left: 5px solid var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            color: var(--gray);
+            font-weight: 600;
+        }
+        
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-icon.primary {
+            background: linear-gradient(135deg, var(--primary), var(--info));
+        }
+        
+        .card-icon.success {
+            background: linear-gradient(135deg, var(--success), #4cc9f0);
+        }
+        
+        .card-icon.warning {
+            background: linear-gradient(135deg, var(--warning), #f72585);
+        }
+        
+        .card-icon.danger {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+        }
+        
+        .card-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+        
+        .card-footer {
+            font-size: 14px;
+            color: var(--gray);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .card-footer.positive {
+            color: var(--success);
+        }
+        
+        .card-footer.negative {
+            color: var(--danger);
+        }
+        
+        /* Tables */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            margin-bottom: 35px;
+            overflow-x: auto;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .table-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .status.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.delivered {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status.cancelled {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.active {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.inactive {
+            background-color: #e2e3e5;
+            color: #383d41;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--info));
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #4cc9f0);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #f72585);
+            color: white;
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+            outline: none;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            animation: modalFadeIn 0.3s;
+        }
+        
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray);
+            transition: color 0.3s;
+        }
+        
+        .close-modal:hover {
+            color: var(--danger);
+        }
+        
+        /* Scanner */
+        .scanner-container {
+            text-align: center;
+            padding: 30px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            background-color: #f9f9f9;
+        }
+        
+        .scanner-placeholder {
+            font-size: 60px;
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+        
+        #scanner-preview {
+            width: 100%;
+            max-width: 500px;
+            height: 300px;
+            background-color: #000;
+            margin: 0 auto 20px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #eaeaea;
+            margin-bottom: 25px;
+        }
+        
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Charts */
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            margin-bottom: 35px;
+            height: 350px;
+        }
+        
+        /* Inactivity Modal */
+        #inactivityModal .modal-content {
+            max-width: 450px;
+            text-align: center;
+        }
+        
+        .inactivity-icon {
+            font-size: 60px;
+            color: var(--warning);
+            margin-bottom: 20px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                width: var(--sidebar-collapsed-width);
+            }
+            
+            .sidebar .menu-text {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: var(--sidebar-collapsed-width);
+            }
+            
+            .sidebar-header h2 {
+                display: none;
+            }
+            
+            .sidebar-menu a {
+                text-align: center;
+                padding: 15px 10px;
+            }
+            
+            .sidebar-menu i {
+                margin-right: 0;
+                font-size: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .user-info {
+                align-self: flex-end;
+            }
+        }
+        
+        /* Configurações */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .setting-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            padding: 25px;
+            transition: all 0.3s;
+        }
+        
+        .setting-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .setting-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .setting-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+        }
+        
+        .setting-icon.backup {
+            background: linear-gradient(135deg, var(--primary), var(--info));
+        }
+        
+        .setting-icon.security {
+            background: linear-gradient(135deg, var(--success), #4cc9f0);
+        }
+        
+        .setting-icon.notifications {
+            background: linear-gradient(135deg, var(--warning), #f72585);
+        }
+
+        .setting-icon.danger {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+        }
+        
+        .setting-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+        
+        .backup-options {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 3000;
+        }
+        
+        .toast {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            min-width: 300px;
+            transform: translateX(400px);
+            transition: transform 0.3s;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+        
+        .toast.success .toast-icon {
+            background-color: var(--success);
+        }
+        
+        .toast.error .toast-icon {
+            background-color: var(--danger);
+        }
+        
+        .toast.warning .toast-icon {
+            background-color: var(--warning);
+        }
+        
+        .toast.info .toast-icon {
+            background-color: var(--info);
+        }
+        
+        .toast-content {
+            flex: 1;
+        }
+        
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .toast-message {
+            font-size: 14px;
+            color: var(--gray);
+        }
+        
+        .close-toast {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        /* QR Code Scanner */
+        #qr-scanner {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        /* Search and Filters */
+        .search-filter {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .filter-select {
+            min-width: 200px;
+        }
+        
+        /* Action buttons in tables */
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        /* Detalhes Modal Styling */
+        #modalDetalhesEntrega p {
+            margin: 0;
+            font-size: 16px;
+            color: var(--dark);
+        }
+        #modalDetalhesEntrega label {
+            color: var(--gray);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        #modalDetalhesEntrega strong {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shipping-fast logo-icon"></i>
+                    <span class="logo-text">LogiTrack Pro</span>
+                </div>
+                <button class="toggle-sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active" data-tab="dashboard"><i class="fas fa-home"></i> <span class="menu-text">Dashboard</span></a></li>
+                <li><a href="#" data-tab="empresas"><i class="fas fa-building"></i> <span class="menu-text">Empresas</span></a></li>
+                <li><a href="#" data-tab="entregadores"><i class="fas fa-users"></i> <span class="menu-text">Entregadores</span></a></li>
+                <li><a href="#" data-tab="mercadorias"><i class="fas fa-box"></i> <span class="menu-text">Mercadorias</span></a></li>
+                <li><a href="#" data-tab="entregas"><i class="fas fa-shipping-fast"></i> <span class="menu-text">Entregas</span></a></li>
+                <li><a href="#" data-tab="financeiro"><i class="fas fa-chart-line"></i> <span class="menu-text">Financeiro</span></a></li>
+                <li><a href="#" data-tab="relatorios"><i class="fas fa-chart-bar"></i> <span class="menu-text">Relatórios</span></a></li>
+                <li><a href="#" data-tab="configuracoes"><i class="fas fa-cog"></i> <span class="menu-text">Configurações</span></a></li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>Dashboard</h1>
+                <div class="user-info">
+                    <div class="notification-bell">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </div>
+                    <img src="https://ui-avatars.com/api/?name=Admin+User&background=4361ee&color=fff&size=128" alt="Usuário">
+                    <span>Administrador</span>
+                </div>
+            </div>
+
+            <div id="dashboard" class="tab-content active">
+                <div class="cards">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Entregas Hoje</div>
+                            <div class="card-icon primary">
+                                <i class="fas fa-shipping-fast"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="entregasHoje">24</div>
+                        <div class="card-footer positive">
+                            <i class="fas fa-arrow-up"></i> +5% em relação a ontem
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Recebimentos Pendentes</div>
+                            <div class="card-icon success">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="recebimentosPendentes">R$ 8.450,00</div>
+                        <div class="card-footer">A receber das empresas</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Pagamentos Pendentes</div>
+                            <div class="card-icon danger">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="pagamentosPendentes">R$ 3.120,00</div>
+                        <div class="card-footer">A pagar aos entregadores</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Lucro Estimado</div>
+                            <div class="card-icon warning">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="lucroEstimado">R$ 5.330,00</div>
+                        <div class="card-footer positive">
+                            <i class="fas fa-arrow-up"></i> 12% este mês
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2 class="table-title">Entregas Recentes</h2>
+                        <button class="btn btn-primary" id="btnNovaEntrega">
+                            <i class="fas fa-plus"></i> Nova Entrega
+                        </button>
+                    </div>
+                    <table id="entregasTable">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Empresa</th>
+                                <th>Entregador</th>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="entregasChart"></canvas>
+                </div>
+            </div>
+
+            <div id="empresas" class="tab-content">
+                <div class="header">
+                    <h1>Empresas de Logística</h1>
+                    <button class="btn btn-primary" id="btnNovaEmpresa">
+                        <i class="fas fa-plus"></i> Nova Empresa
+                    </button>
+                </div>
+
+                <div class="search-filter">
+                    <div class="search-box">
+                        <input type="text" id="searchEmpresas" placeholder="Buscar empresas...">
+                    </div>
+                    <div class="filter-select">
+                        <select id="filterEmpresas">
+                            <option value="">Todas as empresas</option>
+                            <option value="15">Pagamento em 15 dias</option>
+                            <option value="30">Pagamento em 30 dias</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="empresasTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CNPJ</th>
+                                <th>Contato</th>
+                                <th>Telefone</th>
+                                <th>Pagamento</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="entregadores" class="tab-content">
+                <div class="header">
+                    <h1>Entregadores</h1>
+                    <button class="btn btn-primary" id="btnNovoEntregador">
+                        <i class="fas fa-plus"></i> Novo Entregador
+                    </button>
+                </div>
+
+                <div class="search-filter">
+                    <div class="search-box">
+                        <input type="text" id="searchEntregadores" placeholder="Buscar entregadores...">
+                    </div>
+                    <div class="filter-select">
+                        <select id="filterEntregadores">
+                            <option value="">Todos os status</option>
+                            <option value="ativo">Ativos</option>
+                            <option value="inativo">Inativos</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="entregadoresTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Telefone</th>
+                                <th>Veículo</th>
+                                <th>Comissão</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="mercadorias" class="tab-content">
+                <div class="header">
+                    <h1>Mercadorias</h1>
+                    <div>
+                        <button class="btn btn-warning" id="btnScanner">
+                            <i class="fas fa-camera"></i> Scanner
+                        </button>
+                        <button class="btn btn-primary" id="btnNovaMercadoria">
+                            <i class="fas fa-plus"></i> Nova Mercadoria
+                        </button>
+                    </div>
+                </div>
+
+                <div class="scanner-container" id="scannerContainer" style="display: none;">
+                    <div id="scanner-preview"></div>
+                    <p>Posicione o código de barras ou QR Code na frente da câmera</p>
+                    <button class="btn btn-secondary" id="btnIniciarScanner">Iniciar Scanner</button>
+                    <button class="btn btn-danger" id="btnPararScanner" style="display: none;">Parar Scanner</button>
+                    <div id="scanner-result" style="margin-top: 15px;"></div>
+                </div>
+
+                <div class="search-filter">
+                    <div class="search-box">
+                        <input type="text" id="searchMercadorias" placeholder="Buscar mercadorias...">
+                    </div>
+                    <div class="filter-select">
+                        <select id="filterMercadorias">
+                            <option value="">Todos os status</option>
+                            <option value="pendente">Pendentes</option>
+                            <option value="entregue">Entregues</option>
+                            <option value="cancelado">Cancelados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="mercadoriasTable">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Descrição</th>
+                                <th>Empresa</th>
+                                <th>Destinatário</th>
+                                <th>Data Recebimento</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="entregas" class="tab-content">
+                <div class="header">
+                    <h1>Controle de Entregas</h1>
+                    <button class="btn btn-primary" id="btnNovaEntrega2">
+                        <i class="fas fa-plus"></i> Nova Entrega
+                    </button>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" data-subtab="pendentes">Pendentes</div>
+                    <div class="tab" data-subtab="em-andamento">Em Andamento</div>
+                    <div class="tab" data-subtab="entregues">Entregues</div>
+                    <div class="tab" data-subtab="canceladas">Canceladas</div>
+                </div>
+
+                <div id="pendentes" class="subtab-content active">
+                    <div class="table-container">
+                        <table id="entregasPendentesTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empresa</th>
+                                    <th>Entregador</th>
+                                    <th>Data</th>
+                                    <th>Rota</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="em-andamento" class="subtab-content">
+                    <div class="table-container">
+                        <table id="entregasAndamentoTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empresa</th>
+                                    <th>Entregador</th>
+                                    <th>Data Saída</th>
+                                    <th>Rota</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="entregues" class="subtab-content">
+                    <div class="table-container">
+                        <table id="entregasEntreguesTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empresa</th>
+                                    <th>Entregador</th>
+                                    <th>Data Entrega</th>
+                                    <th>Rota</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="canceladas" class="subtab-content">
+                    <div class="table-container">
+                        <table id="entregasCanceladasTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empresa</th>
+                                    <th>Entregador</th>
+                                    <th>Data</th>
+                                    <th>Motivo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="financeiro" class="tab-content">
+                <div class="header">
+                    <h1>Financeiro</h1>
+                </div>
+
+                <div class="cards">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">A Receber</div>
+                            <div class="card-icon success">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="valorReceber">R$ 0,00</div>
+                        <div class="card-footer">Das empresas de logística</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">A Pagar</div>
+                            <div class="card-icon danger">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="valorPagar">R$ 0,00</div>
+                        <div class="card-footer">Aos entregadores</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Lucro Líquido</div>
+                            <div class="card-icon warning">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="valorLucro">R$ 0,00</div>
+                        <div class="card-footer">Este mês</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="financeiroChart"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <h2 class="table-title">Fluxo de Caixa</h2>
+                    <table id="fluxoCaixaTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Categoria</th>
+                                <th>Valor</th>
+                                <th>Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="relatorios" class="tab-content">
+                <div class="header">
+                    <h1>Relatórios</h1>
+                    <button class="btn btn-primary" id="btnGerarRelatorio">
+                        <i class="fas fa-download"></i> Gerar Relatório PDF
+                    </button>
+                </div>
+
+                <div class="cards">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Entregas por Empresa</div>
+                            <div class="card-icon primary">
+                                <i class="fas fa-building"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="totalEmpresas">0 empresas</div>
+                        <div class="card-footer">Total de empresas ativas</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Entregadores Ativos</div>
+                            <div class="card-icon success">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="totalEntregadores">0 entregadores</div>
+                        <div class="card-footer">Em serviço ou prontos</div>
+                    </div>
+                </div>
+
+                <div class="chart-container" style="height: 400px;">
+                    <h2 class="table-title">Distribuição de Entregas Entregues</h2>
+                    <canvas id="relatoriosChart"></canvas>
+                </div>
+
+                <div class="table-container">
+                    <h2 class="table-title">Análise de Lucratividade por Empresa (Entregas Concluídas)</h2>
+                    <table id="relatorioEntregasTable">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Entregas</th>
+                                <th>Recebido (R$)</th>
+                                <th>Comissão Paga (R$)</th>
+                                <th>Lucro (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="configuracoes" class="tab-content">
+                <div class="header">
+                    <h1>Configurações do Sistema</h1>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon backup">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div>
+                                <h3 class="setting-title">Backup de Dados</h3>
+                                <p>Faça backup e restaure os dados do sistema</p>
+                            </div>
+                        </div>
+                        <p>Último backup: <span id="ultimoBackup">14/06/2023 14:30</span></p>
+                        <div class="backup-options">
+                            <button class="btn btn-primary" id="btnBackupNow">
+                                <i class="fas fa-download"></i> Fazer Backup Agora
+                            </button>
+                            <button class="btn btn-success" id="btnRestoreBackup">
+                                <i class="fas fa-upload"></i> Restaurar Backup
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon security">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div>
+                                <h3 class="setting-title">Segurança</h3>
+                                <p>Configurações de segurança do sistema</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inactivityTimeout">Tempo de Inatividade (segundos)</label>
+                            <input type="number" id="inactivityTimeout" value="60" min="10" max="3600">
+                        </div>
+                        <div class="form-group">
+                            <label for="autoBackup">Backup Automático</label>
+                            <select id="autoBackup">
+                                <option value="enabled">Habilitado</option>
+                                <option value="disabled">Desabilitado</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="btnSalvarConfig">
+                            <i class="fas fa-save"></i> Salvar Configurações
+                        </button>
+                    </div>
+
+                    <div class="setting-card">
+                        <div class="setting-header">
+                            <div class="setting-icon danger">
+                                <i class="fas fa-trash-alt"></i>
+                            </div>
+                            <div>
+                                <h3 class="setting-title">Manutenção do Sistema</h3>
+                                <p>Limpar todos os dados do sistema</p>
+                            </div>
+                        </div>
+                        <p>Esta ação é irreversível e apagará todas as empresas, entregadores, mercadorias e entregas, exceto as configurações.</p>
+                        <div class="backup-options">
+                            <button class="btn btn-danger" id="btnLimparSistema">
+                                <i class="fas fa-trash"></i> Limpar Sistema
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h2 class="table-title">Logs do Sistema</h2>
+                    <table id="logsTable">
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Usuário</th>
+                                <th>Ação</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modalEmpresa">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nova Empresa de Logística</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="formEmpresa">
+                <div class="form-group">
+                    <label for="empresaNome">Nome da Empresa</label>
+                    <input type="text" id="empresaNome" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="empresaCnpj">CNPJ</label>
+                        <input type="text" id="empresaCnpj" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="empresaEmail">E-mail de Contato</label>
+                        <input type="email" id="empresaEmail" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="empresaTelefone">Telefone</label>
+                        <input type="text" id="empresaTelefone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="empresaPagamento">Prazo de Pagamento (dias)</label>
+                        <select id="empresaPagamento" required>
+                            <option value="15">15 dias</option>
+                            <option value="30">30 dias</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="empresaValor">Valor Fixo por Entrega (R$)</label>
+                        <input type="number" id="empresaValor" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="empresaEndereco">Endereço (Opcional)</label>
+                        <input type="text" id="empresaEndereco">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Salvar Empresa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modalEntregador">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Novo Entregador</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="formEntregador">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entregadorNome">Nome Completo</label>
+                        <input type="text" id="entregadorNome" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entregadorCpf">CPF</label>
+                        <input type="text" id="entregadorCpf" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entregadorTelefone">Telefone</label>
+                        <input type="text" id="entregadorTelefone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entregadorVeiculo">Veículo</label>
+                        <select id="entregadorVeiculo" required>
+                            <option value="moto">Moto</option>
+                            <option value="carro">Carro</option>
+                            <option value="bicicleta">Bicicleta</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entregadorComissao">Comissão Fixo por Entrega (R$)</label>
+                        <input type="number" id="entregadorComissao" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entregadorStatus">Status</label>
+                        <select id="entregadorStatus" required>
+                            <option value="ativo">Ativo</option>
+                            <option value="inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Salvar Entregador</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modalMercadoria">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nova Mercadoria</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="formMercadoria">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mercadoriaCodigo">Código de Rastreio (Manual ou Scanner)</label>
+                        <input type="text" id="mercadoriaCodigo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mercadoriaEmpresa">Empresa Solicitante</label>
+                        <select id="mercadoriaEmpresa" required>
+                            </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="mercadoriaDescricao">Descrição da Mercadoria</label>
+                    <input type="text" id="mercadoriaDescricao" required>
+                </div>
+                <div class="form-group">
+                    <label for="mercadoriaDestinatario">Nome do Destinatário</label>
+                    <input type="text" id="mercadoriaDestinatario" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="mercadoriaEndereco">Endereço de Entrega</label>
+                        <input type="text" id="mercadoriaEndereco" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mercadoriaDataRecebimento">Data de Recebimento</label>
+                        <input type="date" id="mercadoriaDataRecebimento" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Salvar Mercadoria</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modalEntrega">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Nova Entrega</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="formEntrega">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entregaEmpresa">Empresa</label>
+                        <select id="entregaEmpresa" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="entregaEntregador">Entregador</label>
+                        <select id="entregaEntregador" required>
+                            </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="entregaMercadoria">Mercadoria (Código - Descrição)</label>
+                    <select id="entregaMercadoria" required>
+                        </select>
+                </div>
+                <div class="form-group">
+                    <label for="entregaRota">Rota / Observações</label>
+                    <textarea id="entregaRota" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entregaData">Data Limite de Entrega</label>
+                        <input type="date" id="entregaData" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="entregaStatus">Status Inicial</label>
+                        <select id="entregaStatus" required>
+                            <option value="pendente">Pendente</option>
+                            <option value="em-andamento">Em Andamento</option>
+                            <option value="entregue">Entregue</option>
+                            <option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Salvar Entrega</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal" id="modalDetalhesEntrega">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Detalhes da Entrega: <span id="detalhesEntregaCodigo"></span></h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div id="detalhesEntregaConteudo">
+                </div>
+        </div>
+    </div>
+
+    <div class="modal" id="inactivityModal">
+        <div class="modal-content">
+            <div class="inactivity-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="modal-title">Sessão Expirando!</h3>
+            <p>Sua sessão está prestes a expirar devido à inatividade. Deseja continuar?</p>
+            <div class="form-row" style="margin-top: 25px;">
+                <button class="btn btn-primary" id="btnStayActive" style="flex: 1;">Continuar</button>
+                <button class="btn btn-danger" id="btnLogout" style="flex: 1;">Sair e Fazer Backup</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container"></div>
+
+    <script>
+        // Variável global para rastrear o ID da entidade em edição
+        let currentEditId = null;
+
+        // Dados do sistema (simulando um banco de dados em memória)
+        let systemData = {
+            empresas: [
+                { id: 1, nome: "LogiExpress", cnpj: "12.345.678/0001-90", email: "contato@logiexpress.com", telefone: "(11) 9999-8888", endereco: "Rua A, 123", pagamento: "15", valorEntrega: 25.00 },
+                { id: 2, nome: "FastDelivery", cnpj: "98.765.432/0001-10", email: "comercial@fastdelivery.com", telefone: "(11) 7777-6666", endereco: "Av. B, 456", pagamento: "30", valorEntrega: 30.00 },
+                { id: 3, nome: "SpeedLog", cnpj: "11.222.333/0001-44", email: "faleconosco@speedlog.com.br", telefone: "(11) 1111-2222", endereco: "Rua C, 789", pagamento: "15", valorEntrega: 28.50 }
+            ],
+            entregadores: [
+                { id: 101, nome: "João Silva", cpf: "123.456.789-00", telefone: "(11) 98888-7777", veiculo: "moto", comissao: 10.00, status: "ativo" },
+                { id: 102, nome: "Maria Oliveira", cpf: "987.654.321-00", telefone: "(11) 97777-6666", veiculo: "carro", comissao: 15.00, status: "ativo" },
+                { id: 103, nome: "Pedro Souza", cpf: "111.222.333-44", telefone: "(11) 96666-5555", veiculo: "bicicleta", comissao: 5.00, status: "inativo" }
+            ],
+            mercadorias: [
+                { id: 1001, codigo: "BR123456789BR", empresaId: 1, descricao: "Caixa de Documentos", destinatario: "Cliente X", endereco: "Av. Principal, 500", dataRecebimento: "2023-06-12", status: "pendente" },
+                { id: 1002, codigo: "BR987654321BR", empresaId: 2, descricao: "Pacote Pequeno", destinatario: "Cliente Y", endereco: "Rua Secundária, 10", dataRecebimento: "2023-06-13", status: "pendente" },
+                { id: 1003, codigo: "BR111222333BR", empresaId: 1, descricao: "Equipamento Eletrônico", destinatario: "Cliente Z", endereco: "Praça Central, 20", dataRecebimento: "2023-06-14", status: "entregue" }
+            ],
+            entregas: [
+                { id: 1, codigo: "#ENT00001", empresaId: 1, entregadorId: 101, mercadoriaId: 1003, rota: "Centro", data: "2023-06-13", dataSaida: "2023-06-14T08:00:00.000Z", dataEntrega: "2023-06-14T11:30:00.000Z", status: "entregue" },
+                { id: 2, codigo: "#ENT00002", empresaId: 2, entregadorId: 102, mercadoriaId: 1001, rota: "Zona Sul", data: "2023-06-14", dataSaida: null, dataEntrega: null, status: "pendente" },
+                { id: 3, codigo: "#ENT00003", empresaId: 3, entregadorId: 101, mercadoriaId: 1002, rota: "Zona Leste", data: "2023-06-15", dataSaida: "2023-06-15T12:00:00.000Z", dataEntrega: null, status: "em-andamento" }
+            ],
+            financeiro: {
+                receitas: [
+                    { id: 1, data: "2023-06-15", descricao: "Pagamento LogiExpress", categoria: "Receita", valor: 2500.00, tipo: "entrada" },
+                    { id: 2, data: "2023-06-10", descricao: "Pagamento FastDelivery", categoria: "Receita", valor: 1800.00, tipo: "entrada" }
+                ],
+                despesas: [
+                    { id: 1, data: "2023-06-14", descricao: "Pagamento Entregadores", categoria: "Despesa", valor: 980.00, tipo: "saida" },
+                    { id: 2, data: "2023-06-05", descricao: "Pagamento Entregadores", categoria: "Despesa", valor: 1200.00, tipo: "saida" }
+                ]
+            },
+            logs: [
+                { id: 1, data: "2023-06-15 14:30", usuario: "Administrador", acao: "Backup do Sistema", detalhes: "Backup automático realizado com sucesso" },
+                { id: 2, data: "2023-06-15 10:15", usuario: "Administrador", acao: "Nova Empresa", detalhes: "Empresa 'FastDelivery' cadastrada" },
+                { id: 3, data: "2023-06-14 16:45", usuario: "Administrador", acao: "Atualização de Entregador", detalhes: "Dados do entregador 'João Silva' atualizados" },
+                { id: 4, data: "2023-06-14 09:20", usuario: "Administrador", acao: "Relatório Gerado", detalhes: "Relatório financeiro de maio/2023" }
+            ],
+            config: {
+                inactivityTimeout: 60, // 60 segundos
+                autoBackup: true,
+                lastBackup: "2023-06-14 14:30"
+            }
+        };
+
+        // Variáveis de controle de inatividade
+        let inactivityTimer;
+        let inactivityModalTimeout;
+
+        // Funções de Utilitários
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pendente': 'Pendente',
+                'em-andamento': 'Em Andamento',
+                'entregue': 'Entregue',
+                'cancelado': 'Cancelado',
+                'ativo': 'Ativo',
+                'inativo': 'Inativo'
+            };
+            return statusMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            try {
+                return new Date(dateString).toLocaleDateString('pt-BR', options);
+            } catch {
+                return dateString; // Retorna a string original se for inválida
+            }
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        }
+
+        function addLog(acao, detalhes) {
+            const novoLog = {
+                id: systemData.logs.length > 0 ? Math.max(...systemData.logs.map(l => l.id)) + 1 : 1,
+                data: new Date().toLocaleString('pt-BR'),
+                usuario: 'Administrador',
+                acao: acao,
+                detalhes: detalhes
+            };
+            systemData.logs.unshift(novoLog);
+            saveDataToStorage();
+            renderLogs();
+        }
+
+        // Sistema de notificações toast
+        function showToast(title, message, type) {
+            const toastContainer = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.classList.add('toast', type);
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-times' : type === 'warning' ? 'fa-exclamation' : 'fa-info'}"></i>
+                </div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+                <button class="close-toast">&times;</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Força o reflow para aplicar a transição
+            void toast.offsetWidth; 
+            toast.classList.add('show');
+
+            // Fechar após 5 segundos
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 5000);
+
+            // Listener para o botão de fechar
+            toast.querySelector('.close-toast').addEventListener('click', () => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            });
+        }
+
+        // --- Funções de Persistência e Limpeza de Dados ---
+
+        function saveDataToStorage() {
+            localStorage.setItem('logitrack_data', JSON.stringify(systemData));
+        }
+
+        function loadDataFromStorage() {
+            const savedData = localStorage.getItem('logitrack_data');
+            if (savedData) {
+                systemData = JSON.parse(savedData);
+                // Atualiza o valor de timeout com base no que está salvo, convertendo de segundos para milissegundos
+                systemData.config.inactivityTimeout = systemData.config.inactivityTimeout * 1000;
+            }
+        }
+        
+        // Função para limpar todos os dados transacionais do sistema (RESET GERAL)
+        function clearSystemData() {
+            if (confirm('ATENÇÃO: Você está prestes a apagar TODOS os dados do sistema (Empresas, Entregadores, Mercadorias, Entregas, Financeiro e Logs). Esta ação é IRREVERSÍVEL. Deseja continuar?')) {
+                // Cria um novo objeto de dados apenas com a estrutura vazia
+                systemData = {
+                    empresas: [],
+                    entregadores: [],
+                    mercadorias: [],
+                    entregas: [],
+                    financeiro: {
+                        receitas: [],
+                        despesas: []
+                    },
+                    logs: [],
+                    config: {
+                        inactivityTimeout: 60000, // Volta para 60 segundos (em ms)
+                        autoBackup: true,
+                        lastBackup: new Date().toLocaleString('pt-BR')
+                    }
+                };
+                
+                // Salva o novo estado vazio
+                saveDataToStorage();
+                
+                // Limpa o backup salvo
+                localStorage.removeItem('logitrack_backup');
+                
+                // Adicionar o log de limpeza e renderizar tudo
+                addLog('Manutenção', 'Sistema Limpo. Todos os dados transacionais foram apagados.');
+                renderAllData();
+                initCharts(); // Recria os gráficos com dados zerados
+                
+                showToast('Sistema Limpo', 'Todos os dados do sistema foram apagados com sucesso!', 'success');
+            }
+        }
+
+        function performBackup() {
+            const backupData = {
+                timestamp: new Date().toLocaleString('pt-BR'),
+                data: systemData
+            };
+            localStorage.setItem('logitrack_backup', JSON.stringify(backupData));
+            systemData.config.lastBackup = backupData.timestamp;
+            document.getElementById('ultimoBackup').textContent = systemData.config.lastBackup;
+            saveDataToStorage();
+        }
+
+        function restoreBackup() {
+            const backupData = localStorage.getItem('logitrack_backup');
+            if (backupData) {
+                if (confirm('Tem certeza que deseja restaurar o backup? Todos os dados atuais serão substituídos.')) {
+                    const backup = JSON.parse(backupData);
+                    systemData = backup.data;
+                    
+                    // Garante que o timeout está em milissegundos ao restaurar
+                    systemData.config.inactivityTimeout = systemData.config.inactivityTimeout / 1000 >= 1 ? systemData.config.inactivityTimeout : systemData.config.inactivityTimeout * 1000;
+
+                    saveDataToStorage();
+                    renderAllData();
+                    initCharts(); 
+
+                    // Adicionar log
+                    addLog('Restauração de Backup', 'Sistema restaurado a partir de backup');
+                    showToast('Backup Restaurado', 'Todos os dados foram restaurados com sucesso!', 'success');
+                }
+            } else {
+                showToast('Backup Não Encontrado', 'Nenhum backup foi encontrado para restaurar.', 'error');
+            }
+        }
+
+        // --- Funções de Modais e Formulários (CRUD) ---
+
+        // Função universal para abrir modais
+        function openModal(modalId, editId = null) {
+            currentEditId = editId; // Define o ID em edição
+            
+            // Reseta o contexto de edição/criação
+            if (modalId === 'modalEmpresa') {
+                document.querySelector('#modalEmpresa .modal-title').textContent = editId ? 'Editar Empresa' : 'Nova Empresa de Logística';
+                document.querySelector('#formEmpresa button[type="submit"]').textContent = editId ? 'Atualizar Empresa' : 'Salvar Empresa';
+            } else if (modalId === 'modalEntregador') {
+                document.querySelector('#modalEntregador .modal-title').textContent = editId ? 'Editar Entregador' : 'Novo Entregador';
+                document.querySelector('#formEntregador button[type="submit"]').textContent = editId ? 'Atualizar Entregador' : 'Salvar Entregador';
+            } else if (modalId === 'modalMercadoria') {
+                document.querySelector('#modalMercadoria .modal-title').textContent = editId ? 'Editar Mercadoria' : 'Nova Mercadoria';
+                document.querySelector('#formMercadoria button[type="submit"]').textContent = editId ? 'Atualizar Mercadoria' : 'Salvar Mercadoria';
+            }
+
+            document.getElementById(modalId).style.display = 'flex';
+            resetInactivityTimer();
+        }
+
+        // Ações CRUD: Empresas
+        function editEmpresa(id) {
+            const empresa = systemData.empresas.find(e => e.id === id);
+            if (empresa) {
+                document.getElementById('empresaNome').value = empresa.nome;
+                document.getElementById('empresaCnpj').value = empresa.cnpj;
+                document.getElementById('empresaEmail').value = empresa.email;
+                document.getElementById('empresaTelefone').value = empresa.telefone;
+                document.getElementById('empresaEndereco').value = empresa.endereco;
+                document.getElementById('empresaPagamento').value = empresa.pagamento;
+                document.getElementById('empresaValor').value = empresa.valorEntrega;
+                openModal('modalEmpresa', id);
+            }
+        }
+        function deleteEmpresa(id) {
+            if (confirm('Tem certeza que deseja excluir esta empresa?')) {
+                systemData.empresas = systemData.empresas.filter(e => e.id !== id);
+                saveDataToStorage();
+                renderEmpresas();
+                addLog('Empresa Excluída', `Empresa com ID ${id} excluída`);
+                showToast('Empresa Excluída', 'Empresa excluída com sucesso!', 'success');
+            }
+        }
+        function saveEmpresa() {
+            const form = document.getElementById('formEmpresa');
+            // Validação simples
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const commonData = {
+                nome: document.getElementById('empresaNome').value,
+                cnpj: document.getElementById('empresaCnpj').value,
+                email: document.getElementById('empresaEmail').value,
+                telefone: document.getElementById('empresaTelefone').value,
+                endereco: document.getElementById('empresaEndereco').value,
+                pagamento: document.getElementById('empresaPagamento').value,
+                valorEntrega: parseFloat(document.getElementById('empresaValor').value)
+            };
+
+            if (currentEditId) {
+                // Update
+                const index = systemData.empresas.findIndex(e => e.id === currentEditId);
+                systemData.empresas[index] = { ...commonData, id: currentEditId };
+                addLog('Atualização de Empresa', `Dados da empresa "${commonData.nome}" atualizados`);
+                showToast('Empresa Atualizada', `Empresa "${commonData.nome}" atualizada com sucesso!`, 'success');
+            } else {
+                // Create
+                const newId = systemData.empresas.length > 0 ? Math.max(...systemData.empresas.map(e => e.id)) + 1 : 1;
+                systemData.empresas.push({ ...commonData, id: newId });
+                addLog('Nova Empresa', `Empresa "${commonData.nome}" cadastrada`);
+                showToast('Empresa Salva', `Empresa "${commonData.nome}" cadastrada com sucesso!`, 'success');
+            }
+
+            saveDataToStorage();
+            renderEmpresas();
+            document.getElementById('formEmpresa').reset();
+            document.getElementById('modalEmpresa').style.display = 'none';
+        }
+
+        // Ações CRUD: Entregadores
+        function editEntregador(id) {
+            const entregador = systemData.entregadores.find(e => e.id === id);
+            if (entregador) {
+                document.getElementById('entregadorNome').value = entregador.nome;
+                document.getElementById('entregadorCpf').value = entregador.cpf;
+                document.getElementById('entregadorTelefone').value = entregador.telefone;
+                document.getElementById('entregadorVeiculo').value = entregador.veiculo;
+                document.getElementById('entregadorComissao').value = entregador.comissao;
+                document.getElementById('entregadorStatus').value = entregador.status;
+                openModal('modalEntregador', id);
+            }
+        }
+        function deleteEntregador(id) {
+            if (confirm('Tem certeza que deseja excluir este entregador?')) {
+                systemData.entregadores = systemData.entregadores.filter(e => e.id !== id);
+                saveDataToStorage();
+                renderEntregadores();
+                addLog('Entregador Excluído', `Entregador com ID ${id} excluído`);
+                showToast('Entregador Excluído', 'Entregador excluído com sucesso!', 'success');
+            }
+        }
+        function saveEntregador() {
+            const form = document.getElementById('formEntregador');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+            
+            const commonData = {
+                nome: document.getElementById('entregadorNome').value,
+                cpf: document.getElementById('entregadorCpf').value,
+                telefone: document.getElementById('entregadorTelefone').value,
+                veiculo: document.getElementById('entregadorVeiculo').value,
+                comissao: parseFloat(document.getElementById('entregadorComissao').value),
+                status: document.getElementById('entregadorStatus').value
+            };
+
+            if (currentEditId) {
+                // Update
+                const index = systemData.entregadores.findIndex(e => e.id === currentEditId);
+                systemData.entregadores[index] = { ...commonData, id: currentEditId };
+                addLog('Atualização de Entregador', `Dados do entregador "${commonData.nome}" atualizados`);
+                showToast('Entregador Atualizado', `Entregador "${commonData.nome}" atualizado com sucesso!`, 'success');
+            } else {
+                // Create
+                const newId = systemData.entregadores.length > 0 ? Math.max(...systemData.entregadores.map(e => e.id)) + 1 : 101;
+                systemData.entregadores.push({ ...commonData, id: newId });
+                addLog('Novo Entregador', `Entregador "${commonData.nome}" cadastrado`);
+                showToast('Entregador Salvo', `Entregador "${commonData.nome}" cadastrado com sucesso!`, 'success');
+            }
+
+            saveDataToStorage();
+            renderEntregadores();
+            document.getElementById('formEntregador').reset();
+            document.getElementById('modalEntregador').style.display = 'none';
+        }
+
+        // Ações CRUD: Mercadorias
+        function editMercadoria(id) {
+            const mercadoria = systemData.mercadorias.find(m => m.id === id);
+            if (mercadoria) {
+                populateEmpresasSelect('mercadoriaEmpresa');
+                document.getElementById('mercadoriaCodigo').value = mercadoria.codigo;
+                document.getElementById('mercadoriaEmpresa').value = mercadoria.empresaId;
+                document.getElementById('mercadoriaDescricao').value = mercadoria.descricao;
+                document.getElementById('mercadoriaDestinatario').value = mercadoria.destinatario;
+                document.getElementById('mercadoriaEndereco').value = mercadoria.endereco;
+                document.getElementById('mercadoriaDataRecebimento').value = mercadoria.dataRecebimento;
+                openModal('modalMercadoria', id);
+            }
+        }
+        function saveMercadoria() {
+            const form = document.getElementById('formMercadoria');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const commonData = {
+                codigo: document.getElementById('mercadoriaCodigo').value,
+                empresaId: parseInt(document.getElementById('mercadoriaEmpresa').value),
+                descricao: document.getElementById('mercadoriaDescricao').value,
+                destinatario: document.getElementById('mercadoriaDestinatario').value,
+                endereco: document.getElementById('mercadoriaEndereco').value,
+                dataRecebimento: document.getElementById('mercadoriaDataRecebimento').value
+            };
+
+            if (currentEditId) {
+                // Update
+                const index = systemData.mercadorias.findIndex(m => m.id === currentEditId);
+                // Mantém o status original, que é alterado apenas por actions
+                const originalStatus = systemData.mercadorias[index].status; 
+                systemData.mercadorias[index] = { ...commonData, id: currentEditId, status: originalStatus };
+                addLog('Atualização de Mercadoria', `Dados da mercadoria "${commonData.codigo}" atualizados`);
+                showToast('Mercadoria Atualizada', `Mercadoria "${commonData.codigo}" atualizada com sucesso!`, 'success');
+            } else {
+                // Create
+                const newId = systemData.mercadorias.length > 0 ? Math.max(...systemData.mercadorias.map(m => m.id)) + 1 : 1001;
+                systemData.mercadorias.push({ ...commonData, id: newId, status: 'pendente' });
+                addLog('Nova Mercadoria', `Mercadoria "${commonData.descricao}" cadastrada`);
+                showToast('Mercadoria Salva', `Mercadoria "${commonData.descricao}" cadastrada com sucesso!`, 'success');
+            }
+
+            saveDataToStorage();
+            renderMercadorias();
+            document.getElementById('formMercadoria').reset();
+            document.getElementById('modalMercadoria').style.display = 'none';
+        }
+        function updateMercadoriaStatus(id, newStatus) {
+            const mercadoria = systemData.mercadorias.find(m => m.id === id);
+            if (mercadoria) {
+                if (mercadoria.status === newStatus) return; // Evita updates redundantes
+
+                mercadoria.status = newStatus;
+
+                // Se a mercadoria tiver entrega associada e o status for 'entregue', deve finalizar a entrega também
+                if (newStatus === 'entregue') {
+                    const entregaAssociada = systemData.entregas.find(e => e.mercadoriaId === id && e.status !== 'entregue');
+                    if (entregaAssociada) {
+                        finalizarEntrega(entregaAssociada.id); // Reúsa a função de finalizar entrega
+                        return; // O save e log já ocorrerão em finalizarEntrega
+                    }
+                }
+                
+                saveDataToStorage();
+                renderMercadorias();
+                addLog('Status de Mercadoria', `Status da mercadoria ${mercadoria.codigo} alterado para ${getStatusText(newStatus)}`);
+                showToast('Status Atualizado', `Status da mercadoria ${mercadoria.codigo} alterado para ${getStatusText(newStatus)}`, 'info');
+            }
+        }
+
+
+        // Ações: Entregas
+        function verDetalhesEntrega(id) {
+            const entrega = systemData.entregas.find(e => e.id === id);
+            if (!entrega) return;
+
+            const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+            const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+            const mercadoria = systemData.mercadorias.find(m => m.id === entrega.mercadoriaId);
+
+            document.getElementById('detalhesEntregaCodigo').textContent = entrega.codigo;
+            
+            const conteudo = document.getElementById('detalhesEntregaConteudo');
+            conteudo.innerHTML = `
+                <div class="form-group">
+                    <label>Empresa:</label>
+                    <p><strong>${empresa ? empresa.nome : 'N/A'}</strong></p>
+                </div>
+                <div class="form-group">
+                    <label>Entregador:</label>
+                    <p><strong>${entregador ? entregador.nome : 'N/A'}</strong></p>
+                </div>
+                <div class="form-group">
+                    <label>Mercadoria (Cód. - Descrição):</label>
+                    <p><strong>${mercadoria ? mercadoria.codigo + ' - ' + mercadoria.descricao : 'N/A'}</strong></p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data de Solicitação (Limite):</label>
+                        <p><strong>${formatDate(entrega.data)}</strong></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Status:</label>
+                        <p><span class="status ${entrega.status}"><strong>${getStatusText(entrega.status)}</strong></span></p>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Data de Saída:</label>
+                        <p><strong>${entrega.dataSaida ? new Date(entrega.dataSaida).toLocaleString('pt-BR') : 'Aguardando'}</strong></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Data de Entrega:</label>
+                        <p><strong>${entrega.dataEntrega ? new Date(entrega.dataEntrega).toLocaleString('pt-BR') : 'Aguardando'}</strong></p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Rota/Observação:</label>
+                    <p><em>${entrega.rota || 'Nenhuma'}</em></p>
+                </div>
+            `;
+
+            openModal('modalDetalhesEntrega');
+            addLog('Visualização de Entrega', `Detalhes da entrega ${entrega.codigo} visualizados`);
+        }
+
+        function saveEntrega() {
+            const form = document.getElementById('formEntrega');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const mercadoriaId = parseInt(document.getElementById('entregaMercadoria').value);
+            const status = document.getElementById('entregaStatus').value;
+            const dataAtual = new Date().toISOString();
+
+            const novaEntrega = {
+                id: systemData.entregas.length > 0 ? Math.max(...systemData.entregas.map(e => e.id)) + 1 : 1,
+                codigo: `#ENT${String(systemData.entregas.length + 1).padStart(5, '0')}`,
+                empresaId: parseInt(document.getElementById('entregaEmpresa').value),
+                entregadorId: parseInt(document.getElementById('entregaEntregador').value),
+                mercadoriaId: mercadoriaId,
+                rota: document.getElementById('entregaRota').value,
+                data: document.getElementById('entregaData').value,
+                dataSaida: status === 'em-andamento' ? dataAtual : null,
+                dataEntrega: status === 'entregue' ? dataAtual : null,
+                status: status
+            };
+
+            // Atualiza o status da mercadoria
+            const mercadoria = systemData.mercadorias.find(m => m.id === mercadoriaId);
+            if (mercadoria) {
+                mercadoria.status = status;
+            }
+            
+            systemData.entregas.push(novaEntrega);
+            saveDataToStorage();
+            renderAllData(); // Renderiza todas as tabelas e financeiros
+            
+            addLog('Nova Entrega', `Entrega ${novaEntrega.codigo} cadastrada`);
+            showToast('Entrega Salva', `Entrega ${novaEntrega.codigo} cadastrada com sucesso!`, 'success');
+            document.getElementById('formEntrega').reset();
+            document.getElementById('modalEntrega').style.display = 'none';
+        }
+
+        function iniciarEntrega(entregaId) {
+            const entrega = systemData.entregas.find(e => e.id === entregaId);
+            if (entrega) {
+                entrega.status = 'em-andamento';
+                entrega.dataSaida = new Date().toISOString();
+                
+                // Atualiza o status da mercadoria
+                const mercadoria = systemData.mercadorias.find(m => m.id === entrega.mercadoriaId);
+                if (mercadoria) {
+                    mercadoria.status = 'em-andamento';
+                }
+
+                saveDataToStorage();
+                renderAllData();
+                addLog('Entrega Iniciada', `Entrega ${entrega.codigo} iniciada`);
+                showToast('Entrega Iniciada', `Entrega ${entrega.codigo} iniciada com sucesso!`, 'success');
+            }
+        }
+
+        function finalizarEntrega(entregaId) {
+            const entrega = systemData.entregas.find(e => e.id === entregaId);
+            if (entrega) {
+                entrega.status = 'entregue';
+                entrega.dataEntrega = new Date().toISOString();
+
+                // Atualiza o status da mercadoria
+                const mercadoria = systemData.mercadorias.find(m => m.id === entrega.mercadoriaId);
+                if (mercadoria) {
+                    mercadoria.status = 'entregue';
+                }
+
+                // Registra a receita e a despesa
+                addFinancialEntry(entrega);
+
+                saveDataToStorage();
+                renderAllData();
+                addLog('Entrega Finalizada', `Entrega ${entrega.codigo} finalizada`);
+                showToast('Entrega Finalizada', `Entrega ${entrega.codigo} finalizada com sucesso!`, 'success');
+            }
+        }
+
+        function cancelarEntrega(entregaId) {
+            const entrega = systemData.entregas.find(e => e.id === entregaId);
+            if (entrega) {
+                if (!confirm(`Tem certeza que deseja cancelar a entrega ${entrega.codigo}?`)) return;
+
+                entrega.status = 'cancelado';
+                entrega.dataEntrega = new Date().toISOString(); // Usa a data de cancelamento
+                
+                // Atualiza o status da mercadoria
+                const mercadoria = systemData.mercadorias.find(m => m.id === entrega.mercadoriaId);
+                if (mercadoria) {
+                    mercadoria.status = 'cancelado';
+                }
+
+                saveDataToStorage();
+                renderAllData();
+                addLog('Entrega Cancelada', `Entrega ${entrega.codigo} cancelada`);
+                showToast('Entrega Cancelada', `Entrega ${entrega.codigo} cancelada com sucesso.`, 'error');
+            }
+        }
+
+        function addFinancialEntry(entrega) {
+            const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+            const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+            
+            if (empresa) {
+                // Receita (valor da empresa)
+                systemData.financeiro.receitas.push({
+                    id: systemData.financeiro.receitas.length + 1,
+                    data: new Date().toISOString().split('T')[0],
+                    descricao: `Faturamento - Entrega ${entrega.codigo} (${empresa.nome})`,
+                    categoria: "Receita - Entrega",
+                    valor: empresa.valorEntrega,
+                    tipo: "entrada"
+                });
+            }
+
+            if (entregador) {
+                // Despesa (comissão do entregador)
+                systemData.financeiro.despesas.push({
+                    id: systemData.financeiro.despesas.length + 1,
+                    data: new Date().toISOString().split('T')[0],
+                    descricao: `Comissão - Entrega ${entrega.codigo} (${entregador.nome})`,
+                    categoria: "Despesa - Comissão",
+                    valor: entregador.comissao,
+                    tipo: "saida"
+                });
+            }
+
+            addLog('Financeiro', `Registro de receita e despesa para a entrega ${entrega.codigo} adicionado.`);
+        }
+
+
+        // --- Funções de Renderização (Read) ---
+
+        function renderEmpresas() {
+            const tbody = document.querySelector('#empresasTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const searchTerm = document.getElementById('searchEmpresas')?.value?.toLowerCase() || '';
+            const filterValue = document.getElementById('filterEmpresas')?.value || '';
+
+            const filtered = systemData.empresas.filter(empresa => {
+                const matchesSearch = empresa.nome.toLowerCase().includes(searchTerm) || empresa.cnpj.includes(searchTerm) || empresa.email.toLowerCase().includes(searchTerm);
+                const matchesFilter = filterValue === '' || empresa.pagamento === filterValue;
+                return matchesSearch && matchesFilter;
+            });
+
+            filtered.forEach(empresa => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${empresa.nome}</td>
+                    <td>${empresa.cnpj}</td>
+                    <td>${empresa.email}</td>
+                    <td>${empresa.telefone}</td>
+                    <td>${empresa.pagamento} dias</td>
+                    <td class="action-buttons">
+                        <button class="btn btn-primary btn-sm" onclick="editEmpresa(${empresa.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEmpresa(${empresa.id})">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderEntregadores() {
+            const tbody = document.querySelector('#entregadoresTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const searchTerm = document.getElementById('searchEntregadores')?.value?.toLowerCase() || '';
+            const filterValue = document.getElementById('filterEntregadores')?.value || '';
+
+            const filtered = systemData.entregadores.filter(entregador => {
+                const matchesSearch = entregador.nome.toLowerCase().includes(searchTerm) || entregador.cpf.includes(searchTerm);
+                const matchesFilter = filterValue === '' || entregador.status === filterValue;
+                return matchesSearch && matchesFilter;
+            });
+
+            filtered.forEach(entregador => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${entregador.nome}</td>
+                    <td>${entregador.cpf}</td>
+                    <td>${entregador.telefone}</td>
+                    <td>${getStatusText(entregador.veiculo)}</td>
+                    <td>${formatCurrency(entregador.comissao)}/entrega</td>
+                    <td><span class="status ${entregador.status}">${getStatusText(entregador.status)}</span></td>
+                    <td class="action-buttons">
+                        <button class="btn btn-primary btn-sm" onclick="editEntregador(${entregador.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEntregador(${entregador.id})">
+                            <i class="fas fa-trash"></i> Excluir
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderMercadorias() {
+            const tbody = document.querySelector('#mercadoriasTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const searchTerm = document.getElementById('searchMercadorias')?.value?.toLowerCase() || '';
+            const filterValue = document.getElementById('filterMercadorias')?.value || '';
+
+            const filtered = systemData.mercadorias.filter(mercadoria => {
+                const matchesSearch = mercadoria.codigo.toLowerCase().includes(searchTerm) || mercadoria.descricao.toLowerCase().includes(searchTerm) || mercadoria.destinatario.toLowerCase().includes(searchTerm);
+                const matchesFilter = filterValue === '' || mercadoria.status === filterValue;
+                return matchesSearch && matchesFilter;
+            });
+
+            filtered.forEach(mercadoria => {
+                const empresa = systemData.empresas.find(e => e.id === mercadoria.empresaId);
+                const tr = document.createElement('tr');
+                
+                // Botão "Dar Baixa" só aparece se não estiver entregue ou cancelado
+                const darBaixaBtn = (mercadoria.status !== 'entregue' && mercadoria.status !== 'cancelado') ? 
+                    `<button class="btn btn-secondary btn-sm" onclick="updateMercadoriaStatus(${mercadoria.id}, 'entregue')">
+                        <i class="fas fa-check"></i> Dar Baixa
+                    </button>` : '';
+
+                tr.innerHTML = `
+                    <td>${mercadoria.codigo}</td>
+                    <td>${mercadoria.descricao}</td>
+                    <td>${empresa ? empresa.nome : 'N/A'}</td>
+                    <td>${mercadoria.destinatario}</td>
+                    <td>${formatDate(mercadoria.dataRecebimento)}</td>
+                    <td><span class="status ${mercadoria.status}">${getStatusText(mercadoria.status)}</span></td>
+                    <td class="action-buttons">
+                        <button class="btn btn-primary btn-sm" onclick="editMercadoria(${mercadoria.id})">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        ${darBaixaBtn}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderEntregas() {
+            renderEntregasTable('entregasTable', systemData.entregas.slice(0, 10)); // Dashboard: últimas 10
+            renderEntregasTable('entregasPendentesTable', systemData.entregas.filter(e => e.status === 'pendente'));
+            renderEntregasTable('entregasAndamentoTable', systemData.entregas.filter(e => e.status === 'em-andamento'));
+            renderEntregasTable('entregasEntreguesTable', systemData.entregas.filter(e => e.status === 'entregue'));
+            renderEntregasTable('entregasCanceladasTable', systemData.entregas.filter(e => e.status === 'cancelado'));
+            
+            // Atualiza Dashboard Cards
+            const entregasHoje = systemData.entregas.filter(e => formatDate(e.data) === formatDate(new Date().toISOString())).length;
+            document.getElementById('entregasHoje').textContent = entregasHoje;
+        }
+
+        function renderEntregasTable(tableId, entregas) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            entregas.forEach(entrega => {
+                const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+                const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+                
+                const tr = document.createElement('tr');
+                let acoes = '';
+
+                if (entrega.status === 'pendente') {
+                    acoes = `<button class="btn btn-secondary btn-sm" onclick="iniciarEntrega(${entrega.id})">
+                                <i class="fas fa-play"></i> Iniciar
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="cancelarEntrega(${entrega.id})">
+                                <i class="fas fa-ban"></i> Cancelar
+                            </button>`;
+                } else if (entrega.status === 'em-andamento') {
+                    acoes = `<button class="btn btn-success btn-sm" onclick="finalizarEntrega(${entrega.id})">
+                                <i class="fas fa-check"></i> Finalizar
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="cancelarEntrega(${entrega.id})">
+                                <i class="fas fa-ban"></i> Cancelar
+                            </button>`;
+                } else if (entrega.status === 'entregue' || entrega.status === 'cancelado') {
+                    // Ação primária em entregues/canceladas é ver detalhes
+                }
+
+                acoes += `<button class="btn btn-info btn-sm" onclick="verDetalhesEntrega(${entrega.id})">
+                            <i class="fas fa-eye"></i> Detalhes
+                        </button>`;
+                
+                let dataDisplay = entrega.status === 'em-andamento' ? formatDate(entrega.dataSaida) : entrega.status === 'entregue' ? formatDate(entrega.dataEntrega) : formatDate(entrega.data);
+
+                let rotaOrMotivo = entrega.rota;
+                if(entrega.status === 'cancelado') {
+                    rotaOrMotivo = 'Cancelado (Ver Log)';
+                }
+
+                tr.innerHTML = `
+                    <td>${entrega.codigo}</td>
+                    <td>${empresa ? empresa.nome : 'N/A'}</td>
+                    <td>${entregador ? entregador.nome : 'N/A'}</td>
+                    <td>${dataDisplay}</td>
+                    <td><span class="status ${entrega.status}">${getStatusText(entrega.status)}</span></td>
+                    <td class="action-buttons">${acoes}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function renderFinanceiro() {
+            const receitas = systemData.financeiro.receitas.reduce((acc, curr) => acc + curr.valor, 0);
+            const despesas = systemData.financeiro.despesas.reduce((acc, curr) => acc + curr.valor, 0);
+            const lucro = receitas - despesas;
+
+            document.getElementById('valorReceber').textContent = formatCurrency(receitas);
+            document.getElementById('valorPagar').textContent = formatCurrency(despesas);
+            document.getElementById('valorLucro').textContent = formatCurrency(lucro);
+
+            // Atualiza Dashboard Cards (para refletir o financeiro atual)
+            document.getElementById('recebimentosPendentes').textContent = formatCurrency(receitas); // Simplificado como o total
+            document.getElementById('pagamentosPendentes').textContent = formatCurrency(despesas); // Simplificado como o total
+            document.getElementById('lucroEstimado').textContent = formatCurrency(lucro);
+
+            // Renderiza Fluxo de Caixa
+            const allTransactions = [
+                ...systemData.financeiro.receitas.map(t => ({ ...t, sortDate: new Date(t.data) })),
+                ...systemData.financeiro.despesas.map(t => ({ ...t, sortDate: new Date(t.data) }))
+            ].sort((a, b) => b.sortDate - a.sortDate);
+
+            const tbody = document.querySelector('#fluxoCaixaTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            allTransactions.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${formatDate(t.data)}</td>
+                    <td>${t.descricao}</td>
+                    <td>${t.categoria}</td>
+                    <td style="color: ${t.tipo === 'entrada' ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${(t.tipo === 'entrada' ? '+' : '-') + formatCurrency(t.valor)}</td>
+                    <td><span class="status ${t.tipo === 'entrada' ? 'active' : 'cancelled'}">${t.tipo === 'entrada' ? 'Entrada' : 'Saída'}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function renderRelatorios() {
+            document.getElementById('totalEmpresas').textContent = `${systemData.empresas.length} empresas`;
+            document.getElementById('totalEntregadores').textContent = `${systemData.entregadores.filter(e => e.status === 'ativo').length} entregadores`;
+
+            // Relatório de entregas por empresa
+            const tbody = document.querySelector('#relatorioEntregasTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            let totalRecebidoGlobal = 0;
+            let totalComissaoGlobal = 0;
+            let totalEntregasGlobal = 0;
+
+            systemData.empresas.forEach(empresa => {
+                const entregasEmpresa = systemData.entregas.filter(e => e.empresaId === empresa.id && e.status === 'entregue');
+                totalEntregasGlobal += entregasEmpresa.length;
+                
+                const valorRecebido = entregasEmpresa.length * empresa.valorEntrega;
+                totalRecebidoGlobal += valorRecebido;
+
+                const comissaoPaga = entregasEmpresa.reduce((total, entrega) => {
+                    const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+                    return total + (entregador ? entregador.comissao : 0);
+                }, 0);
+                totalComissaoGlobal += comissaoPaga;
+
+                const lucro = valorRecebido - comissaoPaga;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${empresa.nome}</td>
+                    <td>${entregasEmpresa.length}</td>
+                    <td>${formatCurrency(valorRecebido)}</td>
+                    <td>${formatCurrency(comissaoPaga)}</td>
+                    <td>${formatCurrency(lucro)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Adicionar linha de total
+            const totalLucroGlobal = totalRecebidoGlobal - totalComissaoGlobal;
+            const trTotal = document.createElement('tr');
+            trTotal.style.fontWeight = 'bold';
+            trTotal.style.backgroundColor = '#f8f9fa';
+            trTotal.innerHTML = `
+                <td>Total Geral</td>
+                <td>${totalEntregasGlobal}</td>
+                <td>${formatCurrency(totalRecebidoGlobal)}</td>
+                <td>${formatCurrency(totalComissaoGlobal)}</td>
+                <td>${formatCurrency(totalLucroGlobal)}</td>
+            `;
+            tbody.appendChild(trTotal);
+            
+            // Atualizar Gráfico de Relatórios (ChartJS)
+            initCharts();
+        }
+
+        function renderLogs() {
+            const tbody = document.querySelector('#logsTable tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            systemData.logs.forEach(log => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${log.data}</td>
+                    <td>${log.usuario}</td>
+                    <td>${log.acao}</td>
+                    <td>${log.detalhes}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Funções de Gráficos (ChartJS) ---
+
+        let entregasChartInstance = null;
+        let financeiroChartInstance = null;
+        let relatoriosChartInstance = null;
+
+        function initCharts() {
+            // Destruir instâncias existentes para evitar duplicidade
+            if (entregasChartInstance) entregasChartInstance.destroy();
+            if (financeiroChartInstance) financeiroChartInstance.destroy();
+            if (relatoriosChartInstance) relatoriosChartInstance.destroy();
+
+            // Gráfico de Entregas por Status (Dashboard)
+            const entregasStatus = systemData.entregas.reduce((acc, e) => {
+                acc[e.status] = (acc[e.status] || 0) + 1;
+                return acc;
+            }, {});
+
+            const entregasCtx = document.getElementById('entregasChart');
+            if(entregasCtx) {
+                entregasChartInstance = new Chart(entregasCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(entregasStatus).map(s => getStatusText(s)),
+                        datasets: [{
+                            label: 'Entregas por Status',
+                            data: Object.values(entregasStatus),
+                            backgroundColor: [
+                                'rgba(247, 37, 133, 0.7)', // warning - pendente
+                                'rgba(67, 97, 238, 0.7)', // primary - em-andamento
+                                'rgba(76, 201, 240, 0.7)', // success - entregue
+                                'rgba(230, 57, 70, 0.7)' // danger - cancelado
+                            ],
+                            borderColor: [
+                                'rgba(247, 37, 133, 1)',
+                                'rgba(67, 97, 238, 1)',
+                                'rgba(76, 201, 240, 1)',
+                                'rgba(230, 57, 70, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+
+            // Gráfico Financeiro (Financeiro)
+            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+            const financeiroCtx = document.getElementById('financeiroChart');
+            if(financeiroCtx) {
+                financeiroChartInstance = new Chart(financeiroCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: meses,
+                        datasets: [{
+                            label: 'Receitas (R$ Milhares)',
+                            data: [3500, 4200, 3800, 4500, 5000, 4700],
+                            borderColor: 'rgba(76, 201, 240, 1)',
+                            backgroundColor: 'rgba(76, 201, 240, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }, {
+                            label: 'Despesas (R$ Milhares)',
+                            data: [1800, 2100, 2300, 2500, 2700, 2400],
+                            borderColor: 'rgba(230, 57, 70, 1)',
+                            backgroundColor: 'rgba(230, 57, 70, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+            
+            // Gráfico de Relatórios - Entregas por Empresa (Doughnut)
+            const entregasPorEmpresa = systemData.empresas.map(empresa => {
+                return systemData.entregas.filter(e => e.empresaId === empresa.id && e.status === 'entregue').length;
+            });
+            const labelsEmpresas = systemData.empresas.map(e => e.nome);
+            const relatoriosCtx = document.getElementById('relatoriosChart');
+            if(relatoriosCtx) {
+                relatoriosChartInstance = new Chart(relatoriosCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: labelsEmpresas,
+                        datasets: [{
+                            data: entregasPorEmpresa,
+                            backgroundColor: [
+                                'rgba(67, 97, 238, 0.7)',
+                                'rgba(76, 201, 240, 0.7)',
+                                'rgba(247, 37, 133, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(67, 97, 238, 1)',
+                                'rgba(76, 201, 240, 1)',
+                                'rgba(247, 37, 133, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+
+        // --- Funções de Scanner (QuaggaJS) ---
+        let scannerRunning = false;
+
+        function startScanner() {
+            const previewElement = document.querySelector('#scanner-preview');
+            const resultElement = document.getElementById('scanner-result');
+            const startBtn = document.getElementById('btnIniciarScanner');
+            const stopBtn = document.getElementById('btnPararScanner');
+
+            if (scannerRunning) {
+                showToast('Atenção', 'O scanner já está em execução.', 'warning');
+                return;
+            }
+
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: previewElement,
+                    constraints: {
+                        width: 500,
+                        height: 300,
+                        facingMode: "environment" // Usa a câmera traseira em mobile
+                    }
+                },
+                decoder: {
+                    readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "qr_code_reader"] // Inclui QR Code
+                }
+            }, function(err) {
+                if (err) {
+                    console.error("Erro ao inicializar Quagga:", err);
+                    resultElement.innerHTML = `<span class="status cancelled">Erro ao iniciar scanner: ${err.message}</span>`;
+                    return;
+                }
+                
+                Quagga.start();
+                scannerRunning = true;
+                resultElement.innerHTML = '<span class="status pending">Scanner em funcionamento. Aguardando código...</span>';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
+                showToast('Scanner Iniciado', 'Aponte a câmera para o código de barras ou QR Code.', 'success');
+            });
+
+            Quagga.onDetected(function(result) {
+                const code = result.codeResult.code;
+                resultElement.innerHTML = `<span class="status active">Código Detectado: ${code}</span>`;
+                
+                // Exemplo de ação: buscar mercadoria com este código
+                const mercadoriaEncontrada = systemData.mercadorias.find(m => m.codigo === code);
+                if (mercadoriaEncontrada) {
+                    showToast('Mercadoria Encontrada', `Mercadoria: ${mercadoriaEncontrada.descricao} (Status: ${getStatusText(mercadoriaEncontrada.status)})`, 'success');
+                } else {
+                    showToast('Mercadoria Não Encontrada', `Nenhuma mercadoria encontrada para o código ${code}`, 'warning');
+                }
+                
+                // Preenche o campo de código na modal (se estiver aberta)
+                if (document.getElementById('modalMercadoria').style.display === 'flex') {
+                    document.getElementById('mercadoriaCodigo').value = code;
+                }
+
+                stopScanner(); // Para o scanner após a detecção
+            });
+        }
+
+        function stopScanner() {
+            const scannerContainer = document.getElementById('scannerContainer');
+            const startBtn = document.getElementById('btnIniciarScanner');
+            const stopBtn = document.getElementById('btnPararScanner');
+
+            if (Quagga._isInitialized && scannerRunning) {
+                Quagga.stop();
+                scannerRunning = false;
+                document.getElementById('scanner-result').innerHTML = '';
+                
+                if (scannerContainer.style.display === 'block') {
+                    showToast('Scanner Parado', 'O scanner foi desligado.', 'info');
+                }
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+            }
+            scannerContainer.style.display = 'none';
+        }
+
+        // --- Funções de Relatórios PDF ---
+
+        function generatePDFReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const MARGIN = 10;
+            let y = MARGIN;
+            const PAGE_WIDTH = doc.internal.pageSize.getWidth();
+            const FONT_SIZE_TITLE = 18;
+            const FONT_SIZE_HEADER = 14;
+            const FONT_SIZE_NORMAL = 10;
+
+            doc.setFontSize(FONT_SIZE_TITLE);
+            doc.text("Relatório Gerencial LogiTrack Pro", MARGIN, y);
+            y += 7;
+
+            doc.setFontSize(FONT_SIZE_NORMAL);
+            doc.text(`Data de Geração: ${new Date().toLocaleString('pt-BR')}`, MARGIN, y);
+            y += 5;
+
+            // Renderiza a tabela de Lucratividade
+            html2canvas(document.getElementById('relatorioEntregasTable')).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = 190;
+                const imgHeight = canvas.height * imgWidth / canvas.width / (doc.internal.pageSize.getHeight() / 297);
+                
+                if (y + imgHeight > doc.internal.pageSize.getHeight() - MARGIN) {
+                    doc.addPage();
+                    y = MARGIN;
+                }
+
+                doc.setFontSize(FONT_SIZE_HEADER);
+                doc.text("Análise de Lucratividade por Empresa", MARGIN, y);
+                y += 5;
+
+                doc.addImage(imgData, 'PNG', MARGIN, y, imgWidth, imgHeight);
+                y += imgHeight + 10;
+
+                doc.save('Relatorio_LogiTrack_Pro.pdf');
+                addLog('Relatório Gerado', 'Relatório Gerencial em PDF gerado com sucesso.');
+                showToast('Relatório Gerado', 'O relatório em PDF foi baixado com sucesso!', 'success');
+            }).catch(error => {
+                console.error("Erro ao gerar PDF:", error);
+                showToast('Erro no PDF', 'Não foi possível gerar o relatório. Verifique o console.', 'error');
+            });
+        }
+
+        // --- Funções de Inatividade ---
+
+        function startInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            clearTimeout(inactivityModalTimeout);
+            
+            // Define o timer principal
+            inactivityTimer = setTimeout(() => {
+                // Ao expirar, define o timeout para o modal de expiração final
+                inactivityModalTimeout = setTimeout(performLogout, 30000); // 30 segundos para logout após aviso
+                document.getElementById('inactivityModal').style.display = 'flex';
+            }, systemData.config.inactivityTimeout); // Usa o valor da configuração (em ms)
+        }
+
+        function resetInactivityTimer() {
+            if (document.getElementById('inactivityModal').style.display === 'flex') {
+                document.getElementById('inactivityModal').style.display = 'none';
+            }
+            clearTimeout(inactivityModalTimeout);
+            startInactivityTimer();
+        }
+        
+        function performLogout() {
+            performBackup(); // Realiza backup antes de sair
+            alert('Sessão expirada por inatividade. Backup realizado. Redirecionando...');
+            // Simular redirecionamento
+            // window.location.href = '/login'; 
+        }
+
+        // --- Funções de Inicialização ---
+        
+        // Funções para popular selects
+        function populateEmpresasSelect(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '';
+            // Adiciona opção vazia para formulários de criação
+            select.add(new Option('Selecione uma Empresa', '', true, true));
+            systemData.empresas.forEach(empresa => {
+                select.add(new Option(empresa.nome, empresa.id));
+            });
+        }
+        function populateEntregadoresSelect(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '';
+            select.add(new Option('Selecione um Entregador', '', true, true));
+            systemData.entregadores
+                .filter(e => e.status === 'ativo')
+                .forEach(entregador => {
+                    select.add(new Option(entregador.nome, entregador.id));
+                });
+        }
+        function populateMercadoriasSelect(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            select.innerHTML = '';
+            select.add(new Option('Selecione uma Mercadoria (Pendente)', '', true, true));
+            systemData.mercadorias
+                .filter(m => m.status === 'pendente')
+                .forEach(mercadoria => {
+                    select.add(new Option(`${mercadoria.codigo} - ${mercadoria.descricao}`, mercadoria.id));
+                });
+        }
+
+        function renderAllData() {
+            renderEmpresas();
+            renderEntregadores();
+            renderMercadorias();
+            renderEntregas();
+            renderFinanceiro();
+            renderRelatorios();
+            renderLogs();
+            
+            // Atualiza o estado da configuração no painel
+            document.getElementById('inactivityTimeout').value = systemData.config.inactivityTimeout / 1000;
+            document.getElementById('autoBackup').value = systemData.config.autoBackup ? 'enabled' : 'disabled';
+            document.getElementById('ultimoBackup').textContent = systemData.config.lastBackup;
+        }
+
+        function setupEventListeners() {
+            // --- Navegação ---
+            document.querySelectorAll('.sidebar-menu a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.sidebar-menu a').forEach(item => item.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                    document.querySelector('.header h1').textContent = this.querySelector('.menu-text').textContent;
+                    resetInactivityTimer();
+                });
+            });
+
+            document.querySelectorAll('.tab[data-subtab]').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tabs .tab').forEach(item => item.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.subtab-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById(this.getAttribute('data-subtab')).classList.add('active');
+                    resetInactivityTimer();
+                });
+            });
+            
+            document.querySelector('.toggle-sidebar').addEventListener('click', function() {
+                document.querySelector('.sidebar').classList.toggle('collapsed');
+            });
+            
+            // --- Modais de Criação ---
+            document.getElementById('btnNovaEntrega').addEventListener('click', openModalEntrega);
+            document.getElementById('btnNovaEntrega2').addEventListener('click', openModalEntrega);
+            document.getElementById('btnNovaEmpresa').addEventListener('click', function() {
+                document.getElementById('formEmpresa').reset();
+                openModal('modalEmpresa');
+            });
+            document.getElementById('btnNovoEntregador').addEventListener('click', function() {
+                document.getElementById('formEntregador').reset();
+                openModal('modalEntregador');
+            });
+            document.getElementById('btnNovaMercadoria').addEventListener('click', function() {
+                populateEmpresasSelect('mercadoriaEmpresa');
+                document.getElementById('formMercadoria').reset();
+                openModal('modalMercadoria');
+            });
+
+            // --- Submissão de Formulários ---
+            document.getElementById('formEmpresa').addEventListener('submit', function(e) { e.preventDefault(); saveEmpresa(); });
+            document.getElementById('formEntregador').addEventListener('submit', function(e) { e.preventDefault(); saveEntregador(); });
+            document.getElementById('formMercadoria').addEventListener('submit', function(e) { e.preventDefault(); saveMercadoria(); });
+            document.getElementById('formEntrega').addEventListener('submit', function(e) { e.preventDefault(); saveEntrega(); });
+
+            // --- Fechar Modais ---
+            document.querySelectorAll('.close-modal').forEach(button => {
+                button.addEventListener('click', function() {
+                    this.closest('.modal').style.display = 'none';
+                    currentEditId = null; // Reseta o ID de edição
+                    resetInactivityTimer();
+                });
+            });
+            window.addEventListener('click', function(e) {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                        currentEditId = null; // Reseta o ID de edição
+                        resetInactivityTimer();
+                    }
+                });
+            });
+
+            // --- Ações de Sistema e Relatórios ---
+            document.getElementById('btnBackupNow').addEventListener('click', function() { performBackup(); showToast('Backup Manual', 'Backup manual realizado com sucesso!', 'success'); });
+            document.getElementById('btnRestoreBackup').addEventListener('click', restoreBackup);
+            document.getElementById('btnLimparSistema').addEventListener('click', clearSystemData); // NOVO RECURSO
+            document.getElementById('btnGerarRelatorio').addEventListener('click', generatePDFReport);
+            document.getElementById('btnSalvarConfig').addEventListener('click', saveConfig);
+
+            // --- Inatividade ---
+            document.getElementById('btnStayActive').addEventListener('click', function() {
+                document.getElementById('inactivityModal').style.display = 'none';
+                showToast('Sessão Ativa', 'Você escolheu continuar no sistema.', 'info');
+                resetInactivityTimer();
+            });
+            document.getElementById('btnLogout').addEventListener('click', function() {
+                performLogout(); // Realiza o logout imediatamente
+            });
+
+            // --- Scanner ---
+            document.getElementById('btnScanner').addEventListener('click', function() {
+                const scannerContainer = document.getElementById('scannerContainer');
+                if (scannerContainer.style.display === 'none' || scannerContainer.style.display === '') {
+                    scannerContainer.style.display = 'block';
+                    document.getElementById('btnIniciarScanner').style.display = 'inline-flex';
+                    document.getElementById('btnPararScanner').style.display = 'none';
+                } else {
+                    stopScanner();
+                }
+            });
+            document.getElementById('btnIniciarScanner').addEventListener('click', startScanner);
+            document.getElementById('btnPararScanner').addEventListener('click', stopScanner);
+
+
+            // --- Buscas e Filtros ---
+            document.getElementById('searchEmpresas').addEventListener('input', renderEmpresas);
+            document.getElementById('filterEmpresas').addEventListener('change', renderEmpresas);
+            document.getElementById('searchEntregadores').addEventListener('input', renderEntregadores);
+            document.getElementById('filterEntregadores').addEventListener('change', renderEntregadores);
+            document.getElementById('searchMercadorias').addEventListener('input', renderMercadorias);
+            document.getElementById('filterMercadorias').addEventListener('change', renderMercadorias);
+            
+            // Detectar atividade do usuário para inatividade
+            document.addEventListener('mousemove', resetInactivityTimer);
+            document.addEventListener('keypress', resetInactivityTimer);
+            document.addEventListener('click', resetInactivityTimer);
+            document.addEventListener('scroll', resetInactivityTimer);
+        }
+
+        function saveConfig() {
+            const timeoutValue = parseInt(document.getElementById('inactivityTimeout').value, 10);
+            const autoBackupValue = document.getElementById('autoBackup').value;
+
+            if (isNaN(timeoutValue) || timeoutValue < 10) {
+                showToast('Erro de Configuração', 'O tempo de inatividade deve ser de no mínimo 10 segundos.', 'error');
+                return;
+            }
+            
+            // Salva o valor em milissegundos, mas a propriedade 'inactivityTimeout' em systemData é em segundos (para o storage)
+            systemData.config.inactivityTimeout = timeoutValue * 1000;
+            systemData.config.autoBackup = autoBackupValue === 'enabled';
+            
+            // Salva no storage (convertendo para segundos para o JSON)
+            const configToSave = { ...systemData.config, inactivityTimeout: timeoutValue };
+            systemData.config = configToSave; 
+            saveDataToStorage();
+
+            // Reinicia o timer com o novo valor
+            startInactivityTimer();
+
+            showToast('Configurações Salvas', 'As configurações de segurança foram atualizadas!', 'success');
+            addLog('Configuração', 'Configurações de segurança do sistema atualizadas.');
+        }
+
+        function openModalEntrega() {
+            populateEmpresasSelect('entregaEmpresa');
+            populateEntregadoresSelect('entregaEntregador');
+            populateMercadoriasSelect('entregaMercadoria');
+            // Reseta o formulário
+            document.getElementById('formEntrega').reset();
+            openModal('modalEntrega');
+        }
+
+        // --- Inicialização da Aplicação ---
+        
+        function initApp() {
+            loadDataFromStorage();
+            renderAllData();
+            initCharts();
+            setupEventListeners();
+            startInactivityTimer();
+        }
+
+        // Inicia a aplicação após o carregamento do DOM
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
