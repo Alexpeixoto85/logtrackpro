@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -223,6 +224,7 @@
             border-left: 5px solid var(--primary);
             position: relative;
             overflow: hidden;
+            cursor: pointer;
         }
         
         .card:hover {
@@ -959,6 +961,51 @@
         .file-label:hover {
             background: var(--secondary);
         }
+        
+        .card.clickable {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .card.clickable:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .recebimentos-section {
+            margin-bottom: 25px;
+        }
+        
+        .recebimento-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--success);
+        }
+        
+        .recebimento-info {
+            flex: 1;
+        }
+        
+        .recebimento-empresa {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .recebimento-valor {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--success);
+        }
+        
+        .recebimento-detalhes {
+            font-size: 14px;
+            color: var(--gray);
+        }
     </style>
 </head>
 <body>
@@ -1003,7 +1050,7 @@
             <!-- Dashboard -->
             <div id="dashboard" class="tab-content active">
                 <div class="cards">
-                    <div class="card">
+                    <div class="card clickable" id="cardEntregasHoje">
                         <div class="card-header">
                             <div class="card-title">Entregas Hoje</div>
                             <div class="card-icon primary">
@@ -1015,7 +1062,7 @@
                             <i class="fas fa-arrow-up"></i> <span id="variacaoEntregas">0%</span> em relação a ontem
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card clickable" id="cardRecebimentosPendentes">
                         <div class="card-header">
                             <div class="card-title">Recebimentos Pendentes</div>
                             <div class="card-icon success">
@@ -1025,7 +1072,7 @@
                         <div class="card-value" id="valorReceber">R$ 0,00</div>
                         <div class="card-footer">A receber das empresas</div>
                     </div>
-                    <div class="card">
+                    <div class="card clickable" id="cardPagamentosPendentes">
                         <div class="card-header">
                             <div class="card-title">Pagamentos Pendentes</div>
                             <div class="card-icon danger">
@@ -1035,7 +1082,7 @@
                         <div class="card-value" id="valorPagar">R$ 0,00</div>
                         <div class="card-footer">A pagar aos entregadores</div>
                     </div>
-                    <div class="card">
+                    <div class="card clickable" id="cardLucroEstimado">
                         <div class="card-header">
                             <div class="card-title">Lucro Estimado</div>
                             <div class="card-icon warning">
@@ -1366,6 +1413,20 @@
 
                 <div class="chart-container">
                     <canvas id="financeiroChart"></canvas>
+                </div>
+
+                <!-- Seção de Recebimentos Pendentes -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2 class="table-title">Recebimentos Pendentes</h2>
+                        <button class="btn btn-success" id="btnDarBaixaTodos">
+                            <i class="fas fa-check"></i> Dar Baixa em Todos
+                        </button>
+                    </div>
+                    
+                    <div id="recebimentosPendentesList">
+                        <!-- Lista de recebimentos pendentes será carregada aqui -->
+                    </div>
                 </div>
 
                 <div class="table-container">
@@ -1777,7 +1838,7 @@
                     </div>
                     <div class="form-group">
                         <label for="empresaValor">Valor por Entrega (R$)</label>
-                        <input type="number" id="empresaValor" step="0.01" min="0">
+                        <input type="number" id="empresaValor" step="0.01" min="0" required>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1825,7 +1886,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="entregadorComissao">Comissão por Entrega (R$)</label>
-                        <input type="number" id="entregadorComissao" step="0.01" min="0">
+                        <input type="number" id="entregadorComissao" step="0.01" min="0" required>
                     </div>
                     <div class="form-group">
                         <label for="entregadorStatus">Status</label>
@@ -2111,7 +2172,7 @@
     <div class="toast-container"></div>
 
     <script>
-        // Estrutura de dados vazia
+        // Estrutura de dados vazia - COM MELHORIAS
         const emptyData = {
             empresas: [],
             entregadores: [],
@@ -2140,6 +2201,8 @@
         let inactivityTimer;
         let currentChart = null;
         let autoBackupInterval;
+        let scannerActive = false;
+        let scannerStream = null;
 
         // Inicialização do sistema
         document.addEventListener('DOMContentLoaded', function() {
@@ -2178,9 +2241,9 @@
             localStorage.setItem('logitrack_data', JSON.stringify(systemData));
         }
 
-        // Configurar gráficos
+        // Configurar gráficos - CORRIGIDO
         function initializeCharts() {
-            // Gráfico de entregas
+            // Gráfico de entregas - CORRIGIDO
             const entregasCtx = document.getElementById('entregasChart');
             if (entregasCtx) {
                 // Destruir gráfico anterior se existir
@@ -2188,15 +2251,15 @@
                     currentChart.destroy();
                 }
                 
-                const entregasPorDia = calcularEntregasPorDia();
+                const entregasPorDia = calcularEntregasPorDiaUltimaSemana();
                 
                 currentChart = new Chart(entregasCtx.getContext('2d'), {
                     type: 'bar',
                     data: {
-                        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                        labels: entregasPorDia.labels,
                         datasets: [{
                             label: 'Entregas Realizadas',
-                            data: entregasPorDia,
+                            data: entregasPorDia.data,
                             backgroundColor: 'rgba(67, 97, 238, 0.7)',
                             borderColor: 'rgba(67, 97, 238, 1)',
                             borderWidth: 1,
@@ -2228,15 +2291,15 @@
                 });
             }
 
-            // Gráfico financeiro
+            // Gráfico financeiro - CORRIGIDO
             const financeiroCtx = document.getElementById('financeiroChart');
             if (financeiroCtx) {
-                const dadosFinanceiros = calcularDadosFinanceiros();
+                const dadosFinanceiros = calcularDadosFinanceirosReais();
                 
                 new Chart(financeiroCtx.getContext('2d'), {
                     type: 'line',
                     data: {
-                        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                        labels: dadosFinanceiros.labels,
                         datasets: [{
                             label: 'Receitas',
                             data: dadosFinanceiros.receitas,
@@ -2261,55 +2324,99 @@
             }
         }
 
-        // Calcular entregas por dia
-        function calcularEntregasPorDia() {
+        // Calcular entregas por dia - CORRIGIDO
+        function calcularEntregasPorDiaUltimaSemana() {
             const hoje = new Date();
-            const dias = [];
+            const labels = [];
+            const data = [];
             
             for (let i = 6; i >= 0; i--) {
-                const data = new Date(hoje);
-                data.setDate(hoje.getDate() - i);
-                const dataStr = data.toISOString().split('T')[0];
+                const dataRef = new Date(hoje);
+                dataRef.setDate(hoje.getDate() - i);
+                const dataStr = dataRef.toISOString().split('T')[0];
                 
-                const entregasDia = systemData.entregas.filter(e => e.data === dataStr).length;
-                dias.push(entregasDia);
+                // Formatar label para exibição
+                const diaSemana = dataRef.toLocaleDateString('pt-BR', { weekday: 'short' });
+                const diaMes = dataRef.getDate();
+                labels.push(`${diaSemana} ${diaMes}`);
+                
+                // Contar entregas do dia
+                const entregasDia = systemData.entregas.filter(e => {
+                    const dataEntrega = new Date(e.dataEntrega || e.data);
+                    return dataEntrega.toISOString().split('T')[0] === dataStr && e.status === 'entregue';
+                }).length;
+                
+                data.push(entregasDia);
             }
             
-            return dias;
+            return { labels, data };
         }
 
-        // Calcular dados financeiros
-        function calcularDadosFinanceiros() {
-            const receitas = [0, 0, 0, 0, 0, 0];
-            const despesas = [0, 0, 0, 0, 0, 0];
+        // Calcular dados financeiros reais - CORRIGIDO
+        function calcularDadosFinanceirosReais() {
+            const hoje = new Date();
+            const labels = [];
+            const receitas = [];
+            const despesas = [];
             
-            // Calcular receitas das entregas
-            systemData.entregas.forEach(entrega => {
-                if (entrega.status === 'entregue') {
-                    const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
-                    if (empresa) {
-                        const mes = new Date(entrega.data).getMonth();
-                        if (mes >= 0 && mes < 6) {
-                            receitas[mes] += empresa.valorEntrega || 0;
+            // Calcular para os últimos 6 meses
+            for (let i = 5; i >= 0; i--) {
+                const dataRef = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+                const mesAno = dataRef.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+                labels.push(mesAno);
+                
+                const mes = dataRef.getMonth();
+                const ano = dataRef.getFullYear();
+                
+                // Calcular receitas do mês
+                let receitaMes = 0;
+                systemData.entregas.forEach(entrega => {
+                    if (entrega.status === 'entregue') {
+                        const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                        if (dataEntrega.getMonth() === mes && dataEntrega.getFullYear() === ano) {
+                            const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+                            if (empresa && empresa.valorEntrega) {
+                                receitaMes += empresa.valorEntrega;
+                            }
                         }
                     }
-                }
-            });
-            
-            // Calcular despesas com entregadores
-            systemData.entregas.forEach(entrega => {
-                if (entrega.status === 'entregue') {
-                    const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
-                    if (entregador) {
-                        const mes = new Date(entrega.data).getMonth();
-                        if (mes >= 0 && mes < 6) {
-                            despesas[mes] += entregador.comissao || 0;
+                });
+                
+                // Adicionar receitas financeiras do mês
+                systemData.financeiro.receitas.forEach(receita => {
+                    const dataReceita = new Date(receita.data);
+                    if (dataReceita.getMonth() === mes && dataReceita.getFullYear() === ano) {
+                        receitaMes += receita.valor;
+                    }
+                });
+                
+                // Calcular despesas do mês
+                let despesaMes = 0;
+                systemData.entregas.forEach(entrega => {
+                    if (entrega.status === 'entregue') {
+                        const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                        if (dataEntrega.getMonth() === mes && dataEntrega.getFullYear() === ano) {
+                            const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+                            if (entregador && entregador.comissao) {
+                                despesaMes += entregador.comissao;
+                            }
                         }
                     }
-                }
-            });
+                });
+                
+                // Adicionar despesas financeiras do mês
+                systemData.financeiro.despesas.forEach(despesa => {
+                    const dataDespesa = new Date(despesa.data);
+                    if (dataDespesa.getMonth() === mes && dataDespesa.getFullYear() === ano) {
+                        despesaMes += despesa.valor;
+                    }
+                });
+                
+                receitas.push(receitaMes);
+                despesas.push(despesaMes);
+            }
             
-            return { receitas, despesas };
+            return { labels, receitas, despesas };
         }
 
         // Configurar event listeners
@@ -2364,6 +2471,24 @@
                 resetInactivityTimer();
             });
 
+            // Cards clicáveis do dashboard
+            document.getElementById('cardEntregasHoje').addEventListener('click', function() {
+                navigateToTab('entregas');
+            });
+
+            document.getElementById('cardRecebimentosPendentes').addEventListener('click', function() {
+                navigateToTab('financeiro');
+                renderRecebimentosPendentes();
+            });
+
+            document.getElementById('cardPagamentosPendentes').addEventListener('click', function() {
+                navigateToTab('financeiro');
+            });
+
+            document.getElementById('cardLucroEstimado').addEventListener('click', function() {
+                navigateToTab('relatorios');
+            });
+
             // Botões para abrir modais
             document.getElementById('btnNovaEmpresa').addEventListener('click', function() {
                 openModal('modalEmpresa');
@@ -2397,6 +2522,11 @@
             document.getElementById('btnScanner').addEventListener('click', function() {
                 const scannerContainer = document.getElementById('scannerContainer');
                 scannerContainer.style.display = scannerContainer.style.display === 'none' ? 'block' : 'none';
+                
+                // Se estiver fechando o scanner, pare a câmera
+                if (scannerContainer.style.display === 'none' && scannerActive) {
+                    stopScanner();
+                }
             });
 
             // Backup e limpeza
@@ -2495,6 +2625,39 @@
                 }, 2000);
             });
 
+            // Scanner
+            document.getElementById('btnIniciarScanner').addEventListener('click', function() {
+                startScanner();
+            });
+
+            document.getElementById('btnPararScanner').addEventListener('click', function() {
+                stopScanner();
+            });
+
+            // Relatórios
+            document.getElementById('btnGerarRelatorio').addEventListener('click', function() {
+                generatePDFReport();
+            });
+
+            document.getElementById('btnImprimirRelatorio').addEventListener('click', function() {
+                window.print();
+            });
+
+            // Baixa de recebimentos
+            document.getElementById('btnDarBaixaTodos').addEventListener('click', function() {
+                darBaixaTodosRecebimentos();
+            });
+
+            // Buscas e filtros
+            document.getElementById('searchEmpresas').addEventListener('input', filterEmpresas);
+            document.getElementById('filterEmpresas').addEventListener('change', filterEmpresas);
+            
+            document.getElementById('searchEntregadores').addEventListener('input', filterEntregadores);
+            document.getElementById('filterEntregadores').addEventListener('change', filterEntregadores);
+            
+            document.getElementById('searchMercadorias').addEventListener('input', filterMercadorias);
+            document.getElementById('filterMercadorias').addEventListener('change', filterMercadorias);
+
             // Fechar modais
             document.querySelectorAll('.close-modal').forEach(button => {
                 button.addEventListener('click', function() {
@@ -2542,39 +2705,30 @@
                 gerarReciboAvulso();
             });
 
-            // Scanner
-            document.getElementById('btnIniciarScanner').addEventListener('click', function() {
-                startScanner();
-            });
-
-            document.getElementById('btnPararScanner').addEventListener('click', function() {
-                stopScanner();
-            });
-
-            // Relatórios
-            document.getElementById('btnGerarRelatorio').addEventListener('click', function() {
-                generatePDFReport();
-            });
-
-            document.getElementById('btnImprimirRelatorio').addEventListener('click', function() {
-                window.print();
-            });
-
-            // Buscas e filtros
-            document.getElementById('searchEmpresas').addEventListener('input', filterEmpresas);
-            document.getElementById('filterEmpresas').addEventListener('change', filterEmpresas);
-            
-            document.getElementById('searchEntregadores').addEventListener('input', filterEntregadores);
-            document.getElementById('filterEntregadores').addEventListener('change', filterEntregadores);
-            
-            document.getElementById('searchMercadorias').addEventListener('input', filterMercadorias);
-            document.getElementById('filterMercadorias').addEventListener('change', filterMercadorias);
-
             // Detectar atividade do usuário
             document.addEventListener('mousemove', resetInactivityTimer);
             document.addEventListener('keypress', resetInactivityTimer);
             document.addEventListener('click', resetInactivityTimer);
             document.addEventListener('scroll', resetInactivityTimer);
+        }
+
+        // Navegar para uma aba específica
+        function navigateToTab(tabId) {
+            document.querySelectorAll('.sidebar-menu a').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            document.querySelector(`.sidebar-menu a[data-tab="${tabId}"]`).classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelector('.header h1').textContent = document.querySelector(`.sidebar-menu a[data-tab="${tabId}"] .menu-text`).textContent;
+            
+            resetInactivityTimer();
         }
 
         // Atualizar display das configurações
@@ -2787,29 +2941,20 @@
             });
         }
 
-        // Renderizar financeiro
+        // Renderizar financeiro - MELHORADO
         function renderFinanceiro() {
             // Calcular totais
-            const totalReceber = systemData.entregas
-                .filter(e => e.status === 'entregue')
-                .reduce((total, entrega) => {
-                    const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
-                    return total + (empresa ? (empresa.valorEntrega || 0) : 0);
-                }, 0);
-                
-            const totalPagar = systemData.entregas
-                .filter(e => e.status === 'entregue')
-                .reduce((total, entrega) => {
-                    const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
-                    return total + (entregador ? (entregador.comissao || 0) : 0);
-                }, 0);
-                
+            const totalReceber = calcularTotalReceber();
+            const totalPagar = calcularTotalPagar();
             const totalLucro = totalReceber - totalPagar;
             
             // Atualizar cards
             document.getElementById('valorReceberFinanceiro').textContent = `R$ ${totalReceber.toFixed(2)}`;
             document.getElementById('valorPagarFinanceiro').textContent = `R$ ${totalPagar.toFixed(2)}`;
             document.getElementById('valorLucroFinanceiro').textContent = `R$ ${totalLucro.toFixed(2)}`;
+            
+            // Renderizar recebimentos pendentes
+            renderRecebimentosPendentes();
             
             // Renderizar fluxo de caixa
             const tbody = document.querySelector('#fluxoCaixaTable tbody');
@@ -2849,6 +2994,104 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Renderizar recebimentos pendentes - CORRIGIDO
+        function renderRecebimentosPendentes() {
+            const container = document.getElementById('recebimentosPendentesList');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const recebimentos = calcularRecebimentosPendentes();
+            
+            if (recebimentos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <p>Nenhum recebimento pendente</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            recebimentos.forEach(recebimento => {
+                const recebimentoItem = document.createElement('div');
+                recebimentoItem.className = 'recebimento-item';
+                recebimentoItem.innerHTML = `
+                    <div class="recebimento-info">
+                        <div class="recebimento-empresa">${recebimento.empresa}</div>
+                        <div class="recebimento-detalhes">${recebimento.entregas} entregas realizadas</div>
+                    </div>
+                    <div class="recebimento-valor">R$ ${recebimento.valor.toFixed(2)}</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-success btn-sm" onclick="darBaixaRecebimento(${recebimento.empresaId})">
+                            <i class="fas fa-check"></i> Dar Baixa
+                        </button>
+                    </div>
+                `;
+                container.appendChild(recebimentoItem);
+            });
+        }
+
+        // Calcular recebimentos pendentes - CORRIGIDO
+        function calcularRecebimentosPendentes() {
+            const recebimentos = [];
+            
+            systemData.empresas.forEach(empresa => {
+                const entregasNaoRecebidas = systemData.entregas.filter(e => 
+                    e.empresaId === empresa.id && 
+                    e.status === 'entregue' && 
+                    !e.recebido
+                );
+                
+                if (entregasNaoRecebidas.length > 0) {
+                    const valorTotal = entregasNaoRecebidas.length * (empresa.valorEntrega || 0);
+                    
+                    recebimentos.push({
+                        empresaId: empresa.id,
+                        empresa: empresa.nome,
+                        entregas: entregasNaoRecebidas.length,
+                        valor: valorTotal
+                    });
+                }
+            });
+            
+            return recebimentos;
+        }
+
+        // Calcular total a receber - CORRIGIDO
+        function calcularTotalReceber() {
+            // Calcular recebimentos pendentes de entregas
+            let totalEntregas = 0;
+            systemData.empresas.forEach(empresa => {
+                const entregasNaoRecebidas = systemData.entregas.filter(e => 
+                    e.empresaId === empresa.id && 
+                    e.status === 'entregue' && 
+                    !e.recebido
+                );
+                
+                totalEntregas += entregasNaoRecebidas.length * (empresa.valorEntrega || 0);
+            });
+            
+            return totalEntregas;
+        }
+
+        // Calcular total a pagar - CORRIGIDO
+        function calcularTotalPagar() {
+            // Calcular pagamentos pendentes a entregadores
+            let totalEntregadores = 0;
+            systemData.entregadores.forEach(entregador => {
+                const entregasNaoPagas = systemData.entregas.filter(e => 
+                    e.entregadorId === entregador.id && 
+                    e.status === 'entregue' && 
+                    !e.pago
+                );
+                
+                totalEntregadores += entregasNaoPagas.length * (entregador.comissao || 0);
+            });
+            
+            return totalEntregadores;
         }
 
         // Renderizar relatórios
@@ -3055,33 +3298,154 @@
             });
         }
 
-        // Atualizar dashboard
+        // Atualizar dashboard - MELHORADO
         function updateDashboard() {
             const hoje = new Date().toISOString().split('T')[0];
-            const entregasHoje = systemData.entregas.filter(e => e.data === hoje).length;
+            const entregasHoje = systemData.entregas.filter(e => {
+                const dataEntrega = new Date(e.dataEntrega || e.data);
+                return dataEntrega.toISOString().split('T')[0] === hoje && e.status === 'entregue';
+            }).length;
             
             document.getElementById('entregasHoje').textContent = entregasHoje;
             
             // Calcular valores financeiros
-            const totalReceber = systemData.entregas
-                .filter(e => e.status === 'entregue')
-                .reduce((total, entrega) => {
-                    const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
-                    return total + (empresa ? (empresa.valorEntrega || 0) : 0);
-                }, 0);
-                
-            const totalPagar = systemData.entregas
-                .filter(e => e.status === 'entregue')
-                .reduce((total, entrega) => {
-                    const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
-                    return total + (entregador ? (entregador.comissao || 0) : 0);
-                }, 0);
-                
+            const totalReceber = calcularTotalReceber();
+            const totalPagar = calcularTotalPagar();
             const totalLucro = totalReceber - totalPagar;
             
             document.getElementById('valorReceber').textContent = `R$ ${totalReceber.toFixed(2)}`;
             document.getElementById('valorPagar').textContent = `R$ ${totalPagar.toFixed(2)}`;
             document.getElementById('valorLucro').textContent = `R$ ${totalLucro.toFixed(2)}`;
+            
+            // Calcular variações
+            const ontem = new Date();
+            ontem.setDate(ontem.getDate() - 1);
+            const ontemStr = ontem.toISOString().split('T')[0];
+            const entregasOntem = systemData.entregas.filter(e => {
+                const dataEntrega = new Date(e.dataEntrega || e.data);
+                return dataEntrega.toISOString().split('T')[0] === ontemStr && e.status === 'entregue';
+            }).length;
+            
+            const variacaoEntregas = entregasOntem > 0 ? 
+                Math.round(((entregasHoje - entregasOntem) / entregasOntem) * 100) : 0;
+            
+            document.getElementById('variacaoEntregas').textContent = `${Math.abs(variacaoEntregas)}%`;
+            
+            // Calcular variação do lucro
+            const lucroMesAtual = calcularLucroMesAtual();
+            const lucroMesAnterior = calcularLucroMesAnterior();
+            const variacaoLucro = lucroMesAnterior > 0 ? 
+                Math.round(((lucroMesAtual - lucroMesAnterior) / lucroMesAnterior) * 100) : 0;
+            
+            document.getElementById('variacaoLucro').textContent = `${Math.abs(variacaoLucro)}%`;
+        }
+
+        // Calcular lucro do mês atual
+        function calcularLucroMesAtual() {
+            const hoje = new Date();
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            
+            let receitaMes = 0;
+            let despesaMes = 0;
+            
+            // Receitas de entregas
+            systemData.entregas.forEach(entrega => {
+                if (entrega.status === 'entregue') {
+                    const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                    if (dataEntrega.getMonth() === mesAtual && dataEntrega.getFullYear() === anoAtual) {
+                        const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+                        if (empresa && empresa.valorEntrega) {
+                            receitaMes += empresa.valorEntrega;
+                        }
+                    }
+                }
+            });
+            
+            // Receitas financeiras
+            systemData.financeiro.receitas.forEach(receita => {
+                const dataReceita = new Date(receita.data);
+                if (dataReceita.getMonth() === mesAtual && dataReceita.getFullYear() === anoAtual) {
+                    receitaMes += receita.valor;
+                }
+            });
+            
+            // Despesas com entregadores
+            systemData.entregas.forEach(entrega => {
+                if (entrega.status === 'entregue') {
+                    const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                    if (dataEntrega.getMonth() === mesAtual && dataEntrega.getFullYear() === anoAtual) {
+                        const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+                        if (entregador && entregador.comissao) {
+                            despesaMes += entregador.comissao;
+                        }
+                    }
+                }
+            });
+            
+            // Despesas financeiras
+            systemData.financeiro.despesas.forEach(despesa => {
+                const dataDespesa = new Date(despesa.data);
+                if (dataDespesa.getMonth() === mesAtual && dataDespesa.getFullYear() === anoAtual) {
+                    despesaMes += despesa.valor;
+                }
+            });
+            
+            return receitaMes - despesaMes;
+        }
+
+        // Calcular lucro do mês anterior
+        function calcularLucroMesAnterior() {
+            const hoje = new Date();
+            const mesAnterior = hoje.getMonth() === 0 ? 11 : hoje.getMonth() - 1;
+            const anoAnterior = hoje.getMonth() === 0 ? hoje.getFullYear() - 1 : hoje.getFullYear();
+            
+            let receitaMes = 0;
+            let despesaMes = 0;
+            
+            // Receitas de entregas
+            systemData.entregas.forEach(entrega => {
+                if (entrega.status === 'entregue') {
+                    const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                    if (dataEntrega.getMonth() === mesAnterior && dataEntrega.getFullYear() === anoAnterior) {
+                        const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
+                        if (empresa && empresa.valorEntrega) {
+                            receitaMes += empresa.valorEntrega;
+                        }
+                    }
+                }
+            });
+            
+            // Receitas financeiras
+            systemData.financeiro.receitas.forEach(receita => {
+                const dataReceita = new Date(receita.data);
+                if (dataReceita.getMonth() === mesAnterior && dataReceita.getFullYear() === anoAnterior) {
+                    receitaMes += receita.valor;
+                }
+            });
+            
+            // Despesas com entregadores
+            systemData.entregas.forEach(entrega => {
+                if (entrega.status === 'entregue') {
+                    const dataEntrega = new Date(entrega.dataEntrega || entrega.data);
+                    if (dataEntrega.getMonth() === mesAnterior && dataEntrega.getFullYear() === anoAnterior) {
+                        const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
+                        if (entregador && entregador.comissao) {
+                            despesaMes += entregador.comissao;
+                        }
+                    }
+                }
+            });
+            
+            // Despesas financeiras
+            systemData.financeiro.despesas.forEach(despesa => {
+                const dataDespesa = new Date(despesa.data);
+                if (dataDespesa.getMonth() === mesAnterior && dataDespesa.getFullYear() === anoAnterior) {
+                    despesaMes += despesa.valor;
+                }
+            });
+            
+            return receitaMes - despesaMes;
         }
 
         // Sistema de inatividade
@@ -3314,7 +3678,7 @@
                 email: document.getElementById('empresaEmail').value || null,
                 endereco: document.getElementById('empresaEndereco').value || null,
                 pagamento: document.getElementById('empresaPagamento').value || null,
-                valorEntrega: document.getElementById('empresaValor').value ? parseFloat(document.getElementById('empresaValor').value) : null
+                valorEntrega: document.getElementById('empresaValor').value ? parseFloat(document.getElementById('empresaValor').value) : 0
             };
             
             systemData.empresas.push(novaEmpresa);
@@ -3334,7 +3698,7 @@
                 telefone: document.getElementById('entregadorTelefone').value,
                 cpf: document.getElementById('entregadorCpf').value || null,
                 veiculo: document.getElementById('entregadorVeiculo').value || null,
-                comissao: document.getElementById('entregadorComissao').value ? parseFloat(document.getElementById('entregadorComissao').value) : null,
+                comissao: document.getElementById('entregadorComissao').value ? parseFloat(document.getElementById('entregadorComissao').value) : 0,
                 status: document.getElementById('entregadorStatus').value || 'ativo'
             };
             
@@ -3382,7 +3746,9 @@
                 data: document.getElementById('entregaData').value,
                 dataSaida: null,
                 dataEntrega: null,
-                status: document.getElementById('entregaStatus').value
+                status: document.getElementById('entregaStatus').value,
+                recebido: false,
+                pago: false
             };
             
             systemData.entregas.push(novaEntrega);
@@ -3528,25 +3894,154 @@
             }
         }
 
-        // Scanner (simulado)
-        function startScanner() {
-            document.getElementById('scanner-result').innerHTML = '<p style="color: var(--success);">Scanner iniciado. Em um ambiente real, esta funcionalidade usaria a câmera para ler códigos de barras e QR Codes.</p>';
+        // Dar baixa em recebimentos - CORRIGIDO
+        function darBaixaRecebimento(empresaId) {
+            const empresa = systemData.empresas.find(e => e.id === empresaId);
+            if (!empresa) return;
             
-            setTimeout(() => {
-                const codigos = ['7891234567890', '7899876543210', '7894561230987', '7896543210987'];
-                const codigoAleatorio = codigos[Math.floor(Math.random() * codigos.length)];
-                
-                document.getElementById('scanner-result').innerHTML = `
-                    <p style="color: var(--success);">Código lido: <strong>${codigoAleatorio}</strong></p>
-                    <button class="btn btn-primary" onclick="usarCodigoScanner('${codigoAleatorio}')">Usar este código</button>
-                `;
-            }, 2000);
+            const entregasNaoRecebidas = systemData.entregas.filter(e => 
+                e.empresaId === empresa.id && 
+                e.status === 'entregue' && 
+                !e.recebido
+            );
+            
+            if (entregasNaoRecebidas.length === 0) {
+                showToast('Nenhuma Entrega', `Nenhuma entrega pendente de recebimento para a empresa ${empresa.nome}`, 'warning');
+                return;
+            }
+            
+            const valorTotal = entregasNaoRecebidas.length * (empresa.valorEntrega || 0);
+            
+            // Registrar o recebimento como entrada financeira
+            const novoRecebimento = {
+                id: systemData.financeiro.receitas.length > 0 ? Math.max(...systemData.financeiro.receitas.map(r => r.id)) + 1 : 1,
+                data: new Date().toISOString().split('T')[0],
+                descricao: `Recebimento de ${empresa.nome} - ${entregasNaoRecebidas.length} entregas`,
+                categoria: 'Receita',
+                valor: valorTotal,
+                tipo: 'entrada'
+            };
+            
+            systemData.financeiro.receitas.push(novoRecebimento);
+            
+            // Marcar as entregas como "recebidas"
+            entregasNaoRecebidas.forEach(entrega => {
+                entrega.recebido = true;
+            });
+            
+            saveDataToStorage();
+            renderFinanceiro();
+            updateDashboard();
+            
+            addLog('Recebimento Confirmado', `Recebimento de R$ ${valorTotal.toFixed(2)} da empresa ${empresa.nome}`);
+            showToast('Recebimento Confirmado', `Recebimento de R$ ${valorTotal.toFixed(2)} registrado com sucesso!`, 'success');
         }
 
+        function darBaixaTodosRecebimentos() {
+            const recebimentos = calcularRecebimentosPendentes();
+            
+            if (recebimentos.length === 0) {
+                showToast('Nenhum Recebimento', 'Não há recebimentos pendentes para dar baixa', 'warning');
+                return;
+            }
+            
+            if (confirm(`Deseja dar baixa em todos os ${recebimentos.length} recebimentos pendentes?`)) {
+                recebimentos.forEach(recebimento => {
+                    darBaixaRecebimento(recebimento.empresaId);
+                });
+                
+                showToast('Baixa Concluída', 'Todos os recebimentos foram registrados com sucesso!', 'success');
+            }
+        }
+
+        // Scanner real - IMPLEMENTADO
+        function startScanner() {
+            const scannerPreview = document.getElementById('scanner-preview');
+            const scannerResult = document.getElementById('scanner-result');
+            
+            scannerPreview.innerHTML = '';
+            scannerResult.innerHTML = '<p style="color: var(--info);">Iniciando scanner...</p>';
+            
+            // Verificar se o navegador suporta a API de câmera
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                scannerResult.innerHTML = '<p style="color: var(--danger);">Seu navegador não suporta acesso à câmera.</p>';
+                return;
+            }
+            
+            // Solicitar acesso à câmera
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    scannerStream = stream;
+                    scannerActive = true;
+                    
+                    // Criar elemento de vídeo
+                    const video = document.createElement('video');
+                    video.setAttribute('playsinline', '');
+                    video.setAttribute('autoplay', '');
+                    video.srcObject = stream;
+                    
+                    // Adicionar vídeo ao preview
+                    scannerPreview.appendChild(video);
+                    
+                    // Iniciar detecção de QR Code
+                    scanQRCode(video, scannerResult);
+                    
+                    scannerResult.innerHTML = '<p style="color: var(--info);">Scanner ativo. Aponte para um código QR ou de barras.</p>';
+                })
+                .catch(function(error) {
+                    console.error('Erro ao acessar a câmera:', error);
+                    scannerResult.innerHTML = '<p style="color: var(--danger);">Erro ao acessar a câmera: ' + error.message + '</p>';
+                });
+        }
+
+        // Função para detectar QR Code
+        function scanQRCode(video, resultElement) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            function tick() {
+                if (!scannerActive) return;
+                
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        resultElement.innerHTML = `
+                            <p style="color: var(--success);">Código detectado: <strong>${code.data}</strong></p>
+                            <button class="btn btn-primary" onclick="usarCodigoScanner('${code.data}')">Usar este código</button>
+                        `;
+                        stopScanner();
+                        return;
+                    }
+                }
+                
+                requestAnimationFrame(tick);
+            }
+            
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+                requestAnimationFrame(tick);
+            });
+        }
+
+        // Parar scanner
         function stopScanner() {
+            scannerActive = false;
+            
+            if (scannerStream) {
+                scannerStream.getTracks().forEach(track => track.stop());
+                scannerStream = null;
+            }
+            
             document.getElementById('scanner-result').innerHTML = '<p style="color: var(--danger);">Scanner parado.</p>';
         }
 
+        // Usar código do scanner
         function usarCodigoScanner(codigo) {
             document.getElementById('mercadoriaCodigo').value = codigo;
             document.getElementById('scannerContainer').style.display = 'none';
@@ -3758,27 +4253,15 @@
                     <h3 class="recibo-section-title">Resumo Financeiro</h3>
                     <div class="recibo-item">
                         <span>A Receber:</span>
-                        <span>R$ ${systemData.entregas.filter(e => e.status === 'entregue').reduce((total, entrega) => {
-                            const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
-                            return total + (empresa ? (empresa.valorEntrega || 0) : 0);
-                        }, 0).toFixed(2)}</span>
+                        <span>R$ ${calcularTotalReceber().toFixed(2)}</span>
                     </div>
                     <div class="recibo-item">
                         <span>A Pagar:</span>
-                        <span>R$ ${systemData.entregas.filter(e => e.status === 'entregue').reduce((total, entrega) => {
-                            const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
-                            return total + (entregador ? (entregador.comissao || 0) : 0);
-                        }, 0).toFixed(2)}</span>
+                        <span>R$ ${calcularTotalPagar().toFixed(2)}</span>
                     </div>
                     <div class="recibo-total">
                         <span>Lucro Estimado:</span>
-                        <span>R$ ${(systemData.entregas.filter(e => e.status === 'entregue').reduce((total, entrega) => {
-                            const empresa = systemData.empresas.find(e => e.id === entrega.empresaId);
-                            return total + (empresa ? (empresa.valorEntrega || 0) : 0);
-                        }, 0) - systemData.entregas.filter(e => e.status === 'entregue').reduce((total, entrega) => {
-                            const entregador = systemData.entregadores.find(e => e.id === entrega.entregadorId);
-                            return total + (entregador ? (entregador.comissao || 0) : 0);
-                        }, 0)).toFixed(2)}</span>
+                        <span>R$ ${(calcularTotalReceber() - calcularTotalPagar()).toFixed(2)}</span>
                     </div>
                 </div>
                 
@@ -4085,7 +4568,7 @@
                 empresa.telefone = document.getElementById('empresaTelefone').value;
                 empresa.endereco = document.getElementById('empresaEndereco').value || null;
                 empresa.pagamento = document.getElementById('empresaPagamento').value || null;
-                empresa.valorEntrega = document.getElementById('empresaValor').value ? parseFloat(document.getElementById('empresaValor').value) : null;
+                empresa.valorEntrega = document.getElementById('empresaValor').value ? parseFloat(document.getElementById('empresaValor').value) : 0;
                 
                 saveDataToStorage();
                 renderEmpresas();
@@ -4151,7 +4634,7 @@
                 entregador.cpf = document.getElementById('entregadorCpf').value || null;
                 entregador.telefone = document.getElementById('entregadorTelefone').value;
                 entregador.veiculo = document.getElementById('entregadorVeiculo').value || null;
-                entregador.comissao = document.getElementById('entregadorComissao').value ? parseFloat(document.getElementById('entregadorComissao').value) : null;
+                entregador.comissao = document.getElementById('entregadorComissao').value ? parseFloat(document.getElementById('entregadorComissao').value) : 0;
                 entregador.status = document.getElementById('entregadorStatus').value || 'ativo';
                 
                 saveDataToStorage();
