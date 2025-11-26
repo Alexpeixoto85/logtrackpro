@@ -11,6 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <style>
+        /* Estilos existentes mantidos */
         :root {
             --primary: #4361ee;
             --secondary: #3f37c9;
@@ -1006,6 +1007,65 @@
             font-size: 14px;
             color: var(--gray);
         }
+        
+        /* Novos estilos para a aba de Pagamentos */
+        .pagamento-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--danger);
+        }
+        
+        .pagamento-info {
+            flex: 1;
+        }
+        
+        .pagamento-entregador {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .pagamento-valor {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--danger);
+        }
+        
+        .pagamento-detalhes {
+            font-size: 14px;
+            color: var(--gray);
+        }
+        
+        .financeiro-tabs {
+            display: flex;
+            border-bottom: 1px solid #eaeaea;
+            margin-bottom: 25px;
+        }
+        
+        .financeiro-tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .financeiro-tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .financeiro-subtab-content {
+            display: none;
+        }
+        
+        .financeiro-subtab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1415,17 +1475,41 @@
                     <canvas id="financeiroChart"></canvas>
                 </div>
 
+                <!-- Abas de Recebimentos e Pagamentos -->
+                <div class="financeiro-tabs">
+                    <div class="financeiro-tab active" data-financeiro-subtab="recebimentos">Recebimentos Pendentes</div>
+                    <div class="financeiro-tab" data-financeiro-subtab="pagamentos">Pagamentos Pendentes</div>
+                </div>
+
                 <!-- Seção de Recebimentos Pendentes -->
-                <div class="table-container">
-                    <div class="table-header">
-                        <h2 class="table-title">Recebimentos Pendentes</h2>
-                        <button class="btn btn-success" id="btnDarBaixaTodos">
-                            <i class="fas fa-check"></i> Dar Baixa em Todos
-                        </button>
+                <div id="recebimentos" class="financeiro-subtab-content active">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2 class="table-title">Recebimentos Pendentes</h2>
+                            <button class="btn btn-success" id="btnDarBaixaTodos">
+                                <i class="fas fa-check"></i> Dar Baixa em Todos
+                            </button>
+                        </div>
+                        
+                        <div id="recebimentosPendentesList">
+                            <!-- Lista de recebimentos pendentes será carregada aqui -->
+                        </div>
                     </div>
-                    
-                    <div id="recebimentosPendentesList">
-                        <!-- Lista de recebimentos pendentes será carregada aqui -->
+                </div>
+
+                <!-- Seção de Pagamentos Pendentes -->
+                <div id="pagamentos" class="financeiro-subtab-content">
+                    <div class="table-container">
+                        <div class="table-header">
+                            <h2 class="table-title">Pagamentos Pendentes</h2>
+                            <button class="btn btn-success" id="btnPagarTodos">
+                                <i class="fas fa-check"></i> Pagar Todos
+                            </button>
+                        </div>
+                        
+                        <div id="pagamentosPendentesList">
+                            <!-- Lista de pagamentos pendentes será carregada aqui -->
+                        </div>
                     </div>
                 </div>
 
@@ -2465,6 +2549,26 @@
                 });
             });
 
+            // Navegação entre subtabs (financeiro)
+            document.querySelectorAll('.financeiro-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.financeiro-tab').forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.financeiro-subtab-content').forEach(subtab => {
+                        subtab.classList.remove('active');
+                    });
+                    
+                    const subtabId = this.getAttribute('data-financeiro-subtab');
+                    document.getElementById(subtabId).classList.add('active');
+                    
+                    resetInactivityTimer();
+                });
+            });
+
             // Toggle sidebar
             document.querySelector('.toggle-sidebar').addEventListener('click', function() {
                 document.querySelector('.sidebar').classList.toggle('collapsed');
@@ -2483,6 +2587,11 @@
 
             document.getElementById('cardPagamentosPendentes').addEventListener('click', function() {
                 navigateToTab('financeiro');
+                document.querySelectorAll('.financeiro-tab').forEach(tab => tab.classList.remove('active'));
+                document.querySelector('.financeiro-tab[data-financeiro-subtab="pagamentos"]').classList.add('active');
+                document.querySelectorAll('.financeiro-subtab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById('pagamentos').classList.add('active');
+                renderPagamentosPendentes();
             });
 
             document.getElementById('cardLucroEstimado').addEventListener('click', function() {
@@ -2646,6 +2755,11 @@
             // Baixa de recebimentos
             document.getElementById('btnDarBaixaTodos').addEventListener('click', function() {
                 darBaixaTodosRecebimentos();
+            });
+
+            // Pagamento a entregadores
+            document.getElementById('btnPagarTodos').addEventListener('click', function() {
+                pagarTodosEntregadores();
             });
 
             // Buscas e filtros
@@ -2956,6 +3070,9 @@
             // Renderizar recebimentos pendentes
             renderRecebimentosPendentes();
             
+            // Renderizar pagamentos pendentes
+            renderPagamentosPendentes();
+            
             // Renderizar fluxo de caixa
             const tbody = document.querySelector('#fluxoCaixaTable tbody');
             if (!tbody) return;
@@ -3034,6 +3151,44 @@
             });
         }
 
+        // Renderizar pagamentos pendentes - NOVA FUNÇÃO
+        function renderPagamentosPendentes() {
+            const container = document.getElementById('pagamentosPendentesList');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const pagamentos = calcularPagamentosPendentes();
+            
+            if (pagamentos.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <p>Nenhum pagamento pendente</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            pagamentos.forEach(pagamento => {
+                const pagamentoItem = document.createElement('div');
+                pagamentoItem.className = 'pagamento-item';
+                pagamentoItem.innerHTML = `
+                    <div class="pagamento-info">
+                        <div class="pagamento-entregador">${pagamento.entregador}</div>
+                        <div class="pagamento-detalhes">${pagamento.entregas} entregas realizadas</div>
+                    </div>
+                    <div class="pagamento-valor">R$ ${pagamento.valor.toFixed(2)}</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-success btn-sm" onclick="pagarEntregador(${pagamento.entregadorId})">
+                            <i class="fas fa-check"></i> Pagar
+                        </button>
+                    </div>
+                `;
+                container.appendChild(pagamentoItem);
+            });
+        }
+
         // Calcular recebimentos pendentes - CORRIGIDO
         function calcularRecebimentosPendentes() {
             const recebimentos = [];
@@ -3058,6 +3213,32 @@
             });
             
             return recebimentos;
+        }
+
+        // Calcular pagamentos pendentes - NOVA FUNÇÃO
+        function calcularPagamentosPendentes() {
+            const pagamentos = [];
+            
+            systemData.entregadores.forEach(entregador => {
+                const entregasNaoPagas = systemData.entregas.filter(e => 
+                    e.entregadorId === entregador.id && 
+                    e.status === 'entregue' && 
+                    !e.pago
+                );
+                
+                if (entregasNaoPagas.length > 0) {
+                    const valorTotal = entregasNaoPagas.length * (entregador.comissao || 0);
+                    
+                    pagamentos.push({
+                        entregadorId: entregador.id,
+                        entregador: entregador.nome,
+                        entregas: entregasNaoPagas.length,
+                        valor: valorTotal
+                    });
+                }
+            });
+            
+            return pagamentos;
         }
 
         // Calcular total a receber - CORRIGIDO
@@ -3951,6 +4132,66 @@
                 });
                 
                 showToast('Baixa Concluída', 'Todos os recebimentos foram registrados com sucesso!', 'success');
+            }
+        }
+
+        // Pagar entregador - NOVA FUNÇÃO
+        function pagarEntregador(entregadorId) {
+            const entregador = systemData.entregadores.find(e => e.id === entregadorId);
+            if (!entregador) return;
+            
+            const entregasNaoPagas = systemData.entregas.filter(e => 
+                e.entregadorId === entregador.id && 
+                e.status === 'entregue' && 
+                !e.pago
+            );
+            
+            if (entregasNaoPagas.length === 0) {
+                showToast('Nenhuma Entrega', `Nenhuma entrega pendente de pagamento para o entregador ${entregador.nome}`, 'warning');
+                return;
+            }
+            
+            const valorTotal = entregasNaoPagas.length * (entregador.comissao || 0);
+            
+            // Registrar o pagamento como saída financeira
+            const novoPagamento = {
+                id: systemData.financeiro.despesas.length > 0 ? Math.max(...systemData.financeiro.despesas.map(d => d.id)) + 1 : 1,
+                data: new Date().toISOString().split('T')[0],
+                descricao: `Pagamento a ${entregador.nome} - ${entregasNaoPagas.length} entregas`,
+                categoria: 'Despesa',
+                valor: valorTotal,
+                tipo: 'saida'
+            };
+            
+            systemData.financeiro.despesas.push(novoPagamento);
+            
+            // Marcar as entregas como "pagas"
+            entregasNaoPagas.forEach(entrega => {
+                entrega.pago = true;
+            });
+            
+            saveDataToStorage();
+            renderFinanceiro();
+            updateDashboard();
+            
+            addLog('Pagamento Realizado', `Pagamento de R$ ${valorTotal.toFixed(2)} ao entregador ${entregador.nome}`);
+            showToast('Pagamento Realizado', `Pagamento de R$ ${valorTotal.toFixed(2)} registrado com sucesso!`, 'success');
+        }
+
+        function pagarTodosEntregadores() {
+            const pagamentos = calcularPagamentosPendentes();
+            
+            if (pagamentos.length === 0) {
+                showToast('Nenhum Pagamento', 'Não há pagamentos pendentes para realizar', 'warning');
+                return;
+            }
+            
+            if (confirm(`Deseja pagar todos os ${pagamentos.length} entregadores pendentes?`)) {
+                pagamentos.forEach(pagamento => {
+                    pagarEntregador(pagamento.entregadorId);
+                });
+                
+                showToast('Pagamentos Concluídos', 'Todos os pagamentos foram realizados com sucesso!', 'success');
             }
         }
 
